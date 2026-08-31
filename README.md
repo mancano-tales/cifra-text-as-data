@@ -1,3 +1,5 @@
+<!-- 🇺🇸 English — [🇧🇷 versão em português](README.pt-BR.md) -->
+
 # text-as-data
 
 A small pipeline for turning unstructured text (news articles, social media
