@@ -39,10 +39,12 @@ from .db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord
 from .providers import Provider
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10))
-def _extract_with_retry(provider: Provider, codebook: Codebook, text: str):
-    messages = codebook.build_messages(text)
-    return provider.extract(messages, codebook.schema)
+ERROR_CATEGORIA = "__error__"
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), reraise=True)
+def _extract_with_retry(provider: Provider, messages: list[dict], schema):
+    return provider.extract(messages, schema)
 
 
 def run_extraction(engine, run_id: int, provider: Provider) -> None:
@@ -71,21 +73,23 @@ def run_extraction(engine, run_id: int, provider: Provider) -> None:
                     ExtractionRecord.document_id == document.id,
                     RunRecord.codebook_id == run.codebook_id,
                     RunRecord.model == run.model,
+                    ExtractionRecord.categoria != ERROR_CATEGORIA,
                 )
             ).first()
 
             if cached is not None:
                 categoria, justificativa, trecho = cached.categoria, cached.justificativa, cached.trecho_evidencia
             else:
+                messages = codebook.build_messages(document.text)
                 try:
-                    result = _extract_with_retry(provider, codebook, document.text)
+                    result = _extract_with_retry(provider, messages, codebook.schema)
                     categoria, justificativa, trecho = (
                         result.categoria,
                         result.justificativa,
                         result.trecho_evidencia,
                     )
                 except Exception as exc:  # noqa: BLE001 -- one bad document must not kill the run
-                    categoria, justificativa, trecho = "__error__", str(exc), ""
+                    categoria, justificativa, trecho = ERROR_CATEGORIA, str(exc), ""
 
             session.add(
                 ExtractionRecord(

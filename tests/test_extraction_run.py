@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from text_as_data.db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord, get_engine
-from text_as_data.extraction import run_extraction
+from text_as_data.extraction import ERROR_CATEGORIA, run_extraction
 from text_as_data.providers import Provider
 
 YAML_SOURCE = """
@@ -23,6 +23,16 @@ class CountingFakeProvider(Provider):
     def extract(self, messages, schema):
         self.calls += 1
         return schema(categoria="yes", justificativa="because", trecho_evidencia="quote")
+
+
+class AlwaysFailingProvider(Provider):
+    def __init__(self, message: str = "rate limited: 429"):
+        self.calls = 0
+        self._message = message
+
+    def extract(self, messages, schema):
+        self.calls += 1
+        raise ValueError(self._message)
 
 
 def _seed(engine, n_documents: int = 2) -> tuple[int, str]:
@@ -79,3 +89,49 @@ def test_run_extraction_reuses_cached_extraction_for_same_document_codebook_mode
         extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == second_run_id)).all()
         assert len(extractions) == 1
     assert provider.calls == 1  # not called again for the second run — cache hit
+
+
+def test_run_extraction_records_real_error_message_and_still_marks_run_done():
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=1)
+    provider = AlwaysFailingProvider(message="rate limited: 429")
+
+    run_extraction(engine, run_id, provider)
+
+    with Session(engine) as session:
+        extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
+        run = session.get(RunRecord, run_id)
+        assert len(extractions) == 1
+        assert extractions[0].categoria == ERROR_CATEGORIA
+        # The real error message must survive, not a tenacity RetryError wrapper.
+        assert extractions[0].justificativa == "rate limited: 429"
+        assert "RetryError" not in extractions[0].justificativa
+        assert run.status == "done"
+    assert provider.calls == 3  # retried up to the stop_after_attempt(3) limit
+
+
+def test_run_extraction_does_not_treat_error_row_as_cached():
+    engine = get_engine("sqlite://")
+    run_id, corpus_id = _seed(engine, n_documents=1)
+    failing_provider = AlwaysFailingProvider()
+    run_extraction(engine, run_id, failing_provider)
+    assert failing_provider.calls == 3
+
+    with Session(engine) as session:
+        codebook_id = session.exec(select(RunRecord).where(RunRecord.id == run_id)).one().codebook_id
+        second_run = RunRecord(codebook_id=codebook_id, corpus_id=corpus_id, model="fake-model")
+        session.add(second_run)
+        session.commit()
+        session.refresh(second_run)
+        second_run_id = second_run.id
+
+    succeeding_provider = CountingFakeProvider()
+    run_extraction(engine, second_run_id, succeeding_provider)
+
+    # The prior __error__ row must not be reused as a cache hit — the
+    # provider must be called again for the second run.
+    assert succeeding_provider.calls == 1
+    with Session(engine) as session:
+        extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == second_run_id)).all()
+        assert len(extractions) == 1
+        assert extractions[0].categoria == "yes"
