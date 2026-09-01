@@ -1,8 +1,27 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Literal
 
-from pydantic import BaseModel
+import yaml
+from pydantic import BaseModel, Field, create_model
+
+
+class _CodebookYamlLoader(yaml.SafeLoader):
+    """SafeLoader with the YAML 1.1 implicit-bool resolver disabled.
+
+    Without this, unquoted category labels like `yes`/`no`/`on`/`off` (in
+    any case) are parsed by PyYAML as Python booleans instead of strings,
+    which silently corrupts labels and only surfaces later as a confusing
+    Pydantic error. Codebook authors shouldn't have to know to quote
+    reserved words, so we strip the bool resolver here instead.
+    """
+
+
+_CodebookYamlLoader.yaml_implicit_resolvers = {
+    key: [resolver for resolver in resolvers if resolver[0] != "tag:yaml.org,2002:bool"]
+    for key, resolvers in _CodebookYamlLoader.yaml_implicit_resolvers.items()
+}
 
 
 @dataclass
@@ -38,3 +57,52 @@ class Codebook:
             )
         messages.append({"role": "user", "content": text})
         return messages
+
+    @classmethod
+    def from_yaml_string(cls, source: str) -> "Codebook":
+        spec = yaml.load(source, Loader=_CodebookYamlLoader)
+        return cls._from_spec(spec)
+
+    @classmethod
+    def from_yaml_file(cls, path: str) -> "Codebook":
+        with open(path, encoding="utf-8") as f:
+            return cls.from_yaml_string(f.read())
+
+    @classmethod
+    def _from_spec(cls, spec: dict) -> "Codebook":
+        try:
+            if not spec.get("categories"):
+                raise ValueError("codebook must define at least one category")
+
+            labels = [c["label"] for c in spec["categories"]]
+            if len(set(labels)) != len(labels):
+                raise ValueError(f"duplicate category label in codebook: {labels}")
+
+            # Fixed contract: `categoria`/`justificativa`/`trecho_evidencia` are
+            # relied on by exact field name elsewhere (e.g. db.py's
+            # ExtractionRecord, run_extraction) — renaming here breaks those
+            # call sites silently via AttributeError, not at this layer.
+            schema = create_model(
+                "CodebookExtraction",
+                categoria=(Literal[tuple(labels)], Field(description="One of the codebook's category labels.")),
+                justificativa=(str, Field(description="Free-text rationale for the chosen category.")),
+                trecho_evidencia=(
+                    str,
+                    Field(description="Verbatim quote from the document that grounds the decision."),
+                ),
+            )
+
+            lines = [f"Concept: {spec['concept']}", spec["description"].strip(), "", "Categories:"]
+            for c in spec["categories"]:
+                lines.append(f"- {c['label']}: {c['definition'].strip()}")
+                for ex in c.get("positive_examples", []):
+                    lines.append(f'  Positive example: "{ex}"')
+                for ex in c.get("negative_examples", []):
+                    lines.append(f'  Negative example: "{ex}"')
+                if c.get("boundary_notes"):
+                    lines.append(f"  Boundary notes: {c['boundary_notes'].strip()}")
+            instructions = "\n".join(lines)
+        except KeyError as e:
+            raise ValueError(f"codebook spec missing required field: {e}") from e
+
+        return cls(schema=schema, instructions=instructions)

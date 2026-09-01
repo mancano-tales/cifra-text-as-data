@@ -249,12 +249,39 @@ directly from a script.
 
 The 5-screen MVP is too large for one implementation plan. Build order:
 
-1. **Slice 1 — thin backend skeleton** (in progress): FastAPI + SQLite,
+1. **Slice 1 — thin backend skeleton** (done, 2026-09-01): FastAPI + SQLite,
    engine adapted to load the YAML codebook format above and derive the
    Pydantic schema dynamically, real pilot data (see below, not the toy
    example), with minimal caching/retry and a `curl`-testable API. No
    frontend yet — that is Slice 2's job, matching the Phase 1 acceptance
    criterion above ("backend responds via curl with no frontend open").
+   Final end-to-end verification (Task 10) ran the real backend against
+   the real V7 pilot data using **CLI mode** (`claude -p`), not API-key
+   mode — no `ANTHROPIC_API_KEY` was available in that environment, so
+   this was a genuine exercise of the provider layer's own agent-agnostic
+   design, not a shortcut. Outcome: both hypothesis sides (`H1_a`, `H1_b`)
+   ran successfully end-to-end via `curl`, but the LLM's `categoria`
+   (`cinquenta_e_cinquenta` for both) disagreed with the human gold label
+   (`provavel` for both) — 0/2 agreement on this tiny 2-point sanity
+   check, not a real validation result (see "Real-world pilot data" below
+   for why the gold set is this small). Two genuine Windows-specific bugs
+   were found in `CliProvider` (`src/text_as_data/providers.py`) during
+   this run: (a) `subprocess.run(["claude", "-p"], ...)` failed with
+   `FileNotFoundError: [WinError 2]` because `claude` resolves to an npm
+   `.cmd` shim, which Windows cannot exec without `shell=True` or a fully
+   resolved path; (b) `CliProvider.extract()`'s `subprocess.run(...,
+   text=True)` call had no explicit `encoding=`, so on this Windows
+   machine it silently decoded the CLI's UTF-8 stdout using the locale
+   default (`cp1252`) instead, double-encoding any accented character in
+   `trecho_evidencia`/`justificativa` (e.g. `instituições` became
+   `institui\xc3\x83\xc2\xa7\xc3\x83\xc2\xb5es` at the byte level —
+   confirmed, not a terminal display artifact); the `categoria` enum
+   itself is ASCII-only and was unaffected. **Both fixed same-day**
+   (commit `91c6b5e`): `__init__` now resolves `command[0]` via
+   `shutil.which()` once per instance (falling back to the original name,
+   so a genuinely-missing CLI still raises its own clear error), and
+   `extract()` passes `encoding="utf-8"` explicitly instead of `text=True`.
+   4 new regression tests cover both fixes.
 2. **Slice 2+** — one spec/plan per screen (Corpus import, Codebook
    editor, Run + Results, Validation), each building on the skeleton.
 
@@ -284,18 +311,34 @@ which was the simpler alternative).
   H1a, then H1b) — producing `prob_e_dado_h1` and `prob_e_dado_h2`.
 - **Corpus**: `tb3_evidence_raw` sheet, column `complete_evidence_content`
   (443 rows total, Folha articles and other sources from the 1990s–2010s).
-- **Gold labels for validation — small, use anyway (decided 2026-08-31)**:
-  of 999 rows in `tb4_evidence_analisys`, only **7 have both
-  `prob_e_dado_h1` and `prob_e_dado_h2` filled, and only 5 have
-  `ek_justificativa_likelihoods`** — the workbook is still "em coleta", not
-  a finished instrument. Author explicitly chose to proceed with this
-  small set for Slice 1: enough to prove the pipeline runs end-to-end
-  against real data, not enough for a real Cohen's kappa. A validation
-  slice with statistical power waits until more rows are hand-coded.
-  **Known naming inconsistency**: of those 7 rows, most (`4`) use the
-  workbook's *old* hypothesis-group vocabulary (`H_nao_partidaria`, etc.)
-  rather than the current `H1`/`H2`/`H3` numbering the manual documents as
-  current since 2026-06-08 — handle both when joining `tb3`/`tb4`.
+- **Gold labels for validation — small, use anyway (decided 2026-08-31,
+  refined 2026-09-01 after real import)**: of 999 rows in
+  `tb4_evidence_analisys`, **7 have both `prob_e_dado_h1` and
+  `prob_e_dado_h2` filled, and only 5 have `ek_justificativa_likelihoods`**
+  — the workbook is still "em coleta", not a finished instrument. Author
+  explicitly chose to proceed with this small set for Slice 1: enough to
+  prove the pipeline runs end-to-end against real data, not enough for a
+  real Cohen's kappa. **However**, running Task 7's real import
+  (`scripts/import_v7_pilot.py`) against those 7 rows found the usable
+  count is smaller still: only **2 of the 7** resolve to a real
+  hypothesis-pair definition via `tb1_hypotheses` (joined on the real
+  column name `pk_hyp__code`, not `pk_hyp_pair_code` as originally
+  documented here), and of those 2, only **1** (the `H1` pair) has a
+  usable `fk_id_ev` join to `tb3_evidence_raw` — the other candidate
+  (`H3`) has `fk_id_ev=None` and `#N/A` evidence content in the source
+  workbook itself, so it is unrecoverable, not a pipeline bug. Net result:
+  Slice 1's real pilot run ended up with **1 usable gold evidence row**,
+  validated across both sides of its hypothesis pair (`H1_a`/`H1_b` =
+  2 gold data points), not 2 evidence rows as originally estimated. This
+  is real, useful signal for anyone deciding whether to hand-code more V7
+  rows before Slice 2 — the effective gold set is smaller than "7 rows"
+  suggests. A validation slice with statistical power waits until more
+  rows are hand-coded *and* correctly linked to `tb1_hypotheses`.
+  **Known naming inconsistency**: of the original 7 candidate rows, most
+  (`4`) use the workbook's *old* hypothesis-group vocabulary
+  (`H_nao_partidaria`, etc.) rather than the current `H1`/`H2`/`H3`
+  numbering the manual documents as current since 2026-06-08 — handle both
+  when joining `tb3`/`tb4`.
 - **Known data-quality issue — mojibake, must fix before use (decided
   2026-08-31)**: `complete_evidence_content` and other text fields are
   corrupted (e.g. `institui��es` instead of `instituições`) — a
