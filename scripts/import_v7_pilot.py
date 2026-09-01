@@ -2,6 +2,11 @@
 into the Codifica SQLite DB, and write the 4 per-hypothesis-side codebook
 YAML files plus a gold-labels CSV for later comparison.
 
+Re-running this script is safe: it skips (and reports) any document whose
+`corpus_id` is already present in `codifica.sqlite`, rather than duplicating
+it. It does NOT pick up changes to already-seeded rows -- delete
+`codifica.sqlite` first to fully reseed from scratch.
+
 Usage:
     python scripts/import_v7_pilot.py /path/to/v7_banco_process_tracing_baesiano_abdutivo_manual.xlsx
 """
@@ -14,7 +19,7 @@ from pathlib import Path
 
 import openpyxl
 import yaml
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -103,11 +108,27 @@ def main(xlsx_path: str) -> None:
     with Session(engine) as session:
         for row in kept:
             pair_code = row["fk_hypothesis_group"]
+
+            if row["fk_id_ev"] not in tb3_rows:
+                print(f"  skipping {row.get('pk_id_ev_an')!r}: fk_id_ev={row['fk_id_ev']!r} not found in tb3_evidence_raw")
+                continue
+
+            corpus_id = f"v7_pilot_{pair_code}"
+            existing_doc = session.exec(
+                select(DocumentRecord).where(DocumentRecord.corpus_id == corpus_id)
+            ).first()
+            if existing_doc is not None:
+                print(
+                    f"  skipping seed for {pair_code}: already present in codifica.sqlite "
+                    f"(document id {existing_doc.id}) — delete codifica.sqlite first to reseed from scratch"
+                )
+                continue
+
             side_a_name, side_b_name = lookup[pair_code]
             evidence = tb3_rows[row["fk_id_ev"]]
             text = fix_mojibake(evidence["complete_evidence_content"])
 
-            document = DocumentRecord(corpus_id=f"v7_pilot_{pair_code}", text=text)
+            document = DocumentRecord(corpus_id=corpus_id, text=text)
             session.add(document)
             session.commit()
             session.refresh(document)
@@ -134,6 +155,10 @@ def main(xlsx_path: str) -> None:
                         "gold_justificativa": fix_mojibake(row.get("ek_justificativa_likelihoods") or ""),
                     }
                 )
+
+    if not gold_rows:
+        print("No gold rows produced — nothing to write.")
+        return
 
     gold_path = Path("data") / "v7_pilot_gold.csv"
     gold_path.parent.mkdir(exist_ok=True)
