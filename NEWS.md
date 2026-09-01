@@ -2,6 +2,9 @@
 
 ## 2026-09-01
 
+- Research dialogue report created in `docs/research/2026-09-01_halterman_keith_codebook_llms_dialogue_and_cifra.md` analyzing Halterman & Keith's (2025) foundational paper "Codebook LLMs: Evaluating LLMs as Measurement Tools for Political Science Concepts" (arXiv:2407.10747v2).
+  Establishes how Cifra (`cifra-text-as-data`) implements their five-stage measurement framework (Stage 0 YAML codebooks, Stage 1 label-free behavioral tests, Stage 2 zero-shot evaluation, Stage 3 error analysis, Stage 4 QLoRA instruction tuning) and extends it via auditable structured schemas (`rationale` + `evidence_span`), dual provider engines, and SQLite WAL local storage.
+
 - Product journal entry: Analyzed the 9-page research paper "O Banco de Dados da Luta pela Terra (DATALUTA)..." (NERA/UNESP, 2025/2026).
   Recorded research report in `docs/research/2026-09-01_dataluta_paper_analysis_and_cifra_synergy.md`.
   Findings: The DATALUTA paper uses BeautifulSoup for metadata, SpaCy NER + RAG for IBGE municipality lookup, and fine-tuned BERTimbau-large for UN SDGs. It achieves only ~50% precision on complex interpretative fields ("Action Purpose"). Cifra (`cifra-text-as-data`) solves this bottleneck using instruction-following YAML codebooks (boundary notes, few-shot examples, rationale, evidence spans) and provides inter-coder agreement validation against DATALUTA's 2021–2023 historical human gold-standard labels.
