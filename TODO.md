@@ -2,14 +2,6 @@
 
 ## Pending
 
-- **Slice 1 — thin backend skeleton**: FastAPI + SQLite, YAML codebook
-  loader deriving the Pydantic schema dynamically, provider layer with
-  both CLI mode (Claude Code CLI / Codex CLI / generic) and API-key mode
-  (`instructor`), corpus import + mojibake fix for the `Reforming-TE-PT`
-  V7 evidence text, run against the 7 fully human-coded rows for
-  validation, `curl`-testable, no frontend yet. See `AGENTS.md` § "Build
-  order for the MVP" and § "Real-world pilot data". Ready to move into an
-  implementation plan (`writing-plans`).
 - Codebook editor UI (Screen 2) and arbitrary corpus import (Screen 1,
   CSV/XLSX/TXT/DOCX/PDF) — each gets its own spec/plan after Slice 1, per
   `AGENTS.md` § "Build order for the MVP".
@@ -24,5 +16,12 @@
 
 ## Done
 
+- 2026-09-01 — Slice 1, thin backend skeleton: FastAPI + SQLite backend
+  verified end-to-end via `curl` against real V7 pilot data using CLI mode
+  (`claude -p`, no API key available); both hypothesis sides ran
+  successfully but disagreed with gold (`cinquenta_e_cinquenta` predicted
+  vs. `provavel` gold on both, 0/2) — see `AGENTS.md` § "Build order for
+  the MVP" for full outcome and two Windows-specific `CliProvider` bugs
+  found along the way.
 - 2026-08-30 — Initial scaffold (codebook/extraction/validation modules,
   toy example, tests). Agent: Claude Sonnet 5 (Claude Code).
