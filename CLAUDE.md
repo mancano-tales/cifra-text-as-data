@@ -266,22 +266,22 @@ The 5-screen MVP is too large for one implementation plan. Build order:
    check, not a real validation result (see "Real-world pilot data" below
    for why the gold set is this small). Two genuine Windows-specific bugs
    were found in `CliProvider` (`src/text_as_data/providers.py`) during
-   this run, worked around only in the throwaway verification script
-   (not patched in the codebase, since Task 10 was verification-only):
-   (a) `subprocess.run(["claude", "-p"], ...)` fails with
+   this run: (a) `subprocess.run(["claude", "-p"], ...)` failed with
    `FileNotFoundError: [WinError 2]` because `claude` resolves to an npm
    `.cmd` shim, which Windows cannot exec without `shell=True` or a fully
-   resolved path (fix: resolve via `shutil.which("claude")` before
-   building `command`); (b) `CliProvider.extract()`'s
-   `subprocess.run(..., text=True)` call has no explicit `encoding=`, so
-   on this Windows machine it silently decodes the CLI's UTF-8 stdout
-   using the locale default (`cp1252`) instead, double-encoding any
-   accented character in `trecho_evidencia`/`justificativa` (e.g.
-   `instituições` becomes `institui\xc3\x83\xc2\xa7\xc3\x83\xc2\xb5es` at
-   the byte level — confirmed, not a terminal display artifact). The
-   `categoria` enum itself is ASCII-only and unaffected. Follow-up: add
-   `encoding="utf-8"` to that `subprocess.run` call and resolve the
-   command path via `shutil.which` internally.
+   resolved path; (b) `CliProvider.extract()`'s `subprocess.run(...,
+   text=True)` call had no explicit `encoding=`, so on this Windows
+   machine it silently decoded the CLI's UTF-8 stdout using the locale
+   default (`cp1252`) instead, double-encoding any accented character in
+   `trecho_evidencia`/`justificativa` (e.g. `instituições` became
+   `institui\xc3\x83\xc2\xa7\xc3\x83\xc2\xb5es` at the byte level —
+   confirmed, not a terminal display artifact); the `categoria` enum
+   itself is ASCII-only and was unaffected. **Both fixed same-day**
+   (commit `91c6b5e`): `__init__` now resolves `command[0]` via
+   `shutil.which()` once per instance (falling back to the original name,
+   so a genuinely-missing CLI still raises its own clear error), and
+   `extract()` passes `encoding="utf-8"` explicitly instead of `text=True`.
+   4 new regression tests cover both fixes.
 2. **Slice 2+** — one spec/plan per screen (Corpus import, Codebook
    editor, Run + Results, Validation), each building on the skeleton.
 
