@@ -32,6 +32,21 @@ source reading, recorded here instead of forced**:
   does exist, but covers something else: prompt templating (Jinja), not
   provider selection/routing. See §1 and §2 below.
 
+**On language, for this document specifically**: Open Notebook advertises
+a 6-language UI (English, Portuguese, Chinese Simplified/Traditional,
+Japanese, Russian, Bengali — `README.md` feature list). That breadth isn't
+a relevant comparison point for Cifra. The two languages that actually
+matter for Cifra's real context are **English and Brazilian Portuguese**:
+this repository's own `AGENTS.md` mandates English for everything in the
+codebase, while the actual research content Cifra processes — the
+`Reforming-TE-PT` pilot corpus, the Halterman & Keith dialogue in §6 below
+— is Brazilian Portuguese. Cifra has no product reason to chase Open
+Notebook's full i18n surface; it has a concrete reason to make sure
+PT-BR text (accents, `boundary_notes` written in Portuguese) round-trips
+correctly through whichever provider/encoding path is chosen — which is
+exactly the class of bug `AGENTS.md`'s Slice 1 section already documents
+being found and fixed (`cp1252` double-encoding of `instituições`).
+
 ---
 
 ## 1. Multi-provider abstraction: `esperanto`, not `ai-prompter`
@@ -280,6 +295,44 @@ SurrealDB just for that.
 
 ---
 
+## 6. Cross-reference: Halterman & Keith (2025) makes §3's finding sharper
+
+This repository already has a dedicated dialogue with Halterman & Keith's
+paper — see
+[`docs/research/2026-09-01_halterman_keith_codebook_llms_dialogue_and_cifra.md`](./research/2026-09-01_halterman_keith_codebook_llms_dialogue_and_cifra.md),
+written by a concurrent session the same day as this document. It's worth
+reading together with §3 above, because they reinforce the same point
+from two different angles.
+
+Halterman & Keith's central empirical finding is that zero-shot LLMs fail
+codebook-grounded classification in two specific ways: **instruction
+omission** (given only a bare label name, the model guesses the boundary)
+and **pre-training shortcut bias** (given a full codebook, the model still
+falls back on lexical pattern-matching from pre-training instead of the
+codebook's actual definition — e.g. predicting `RALLY` whenever the word
+"rally" appears, regardless of whether the text matches the codebook's
+definition of `DEMONSTRATION`). Their proposed mitigation, at the
+schema level, is forcing the model to externalize *why* it chose a label,
+not just the label itself.
+
+**This is precisely what Open Notebook's structured-output pattern (§3)
+does not do.** A `PydanticOutputParser` that only recovers a label-shaped
+object after the fact has no mechanism forcing the model to justify a
+classification against a specific codebook definition — it validates the
+*shape* of the output, not the *reasoning*. Cifra's schema already goes
+further than Halterman & Keith's own baseline setup by forcing two
+additional fields per classification, per the other document's §4.1:
+`rationale` (a step-by-step justification grounded in the codebook) and
+`evidence_span` (a verbatim quote from the source text). Read next to
+Open Notebook's actual code, this isn't a redundant design choice — it's
+the concrete, code-level answer to a documented, named failure mode
+(pre-training shortcut bias) that a weaker structured-output pattern like
+Open Notebook's would have no way to catch. The two documents corroborate
+each other: one from reading a competing implementation, the other from
+reading the methodology paper the competing implementation ignores.
+
+---
+
 ## Summary — what to do with this
 
 | Finding | Recommended action |
@@ -292,3 +345,4 @@ SurrealDB just for that.
 | Structured output via prompt+parser (not function-calling) | **Do not copy** — Cifra already does this better via `instructor` |
 | SurrealDB vs. SQLite | **Do not reopen the decision** — SQLite remains correct for Cifra's problem shape |
 | Desktop packaging (`desktop/electron`) | **Does not exist in Open Notebook** — no lesson to extract; Cifra's Phase 2 plan remains without direct precedent here |
+| Halterman & Keith (2025) vs. Open Notebook's structured output | **Corroborating evidence, not a new action** — §6 shows Cifra's `rationale`+`evidence_span` fields are the concrete answer to the paper's "pre-training shortcut bias" finding, which Open Notebook's weaker output pattern has no mechanism to catch |
