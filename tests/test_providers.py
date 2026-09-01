@@ -105,3 +105,23 @@ def test_cli_provider_handles_unmatched_brace_inside_json_string_value():
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
     assert result.categoria == "protest"
+
+
+def test_cli_provider_prefers_top_level_object_over_nested_sub_object():
+    # A CLI that wraps its answer in a named key (e.g. `{"result": {...}}`,
+    # or here a `wrapper` key containing a nested object that itself
+    # happens to validate against the schema) must not have that inner
+    # object mistaken for the real, top-level answer. Trying
+    # `raw_decode` at every `{` position -- including ones nested inside
+    # an already-parsed object -- would find the inner object first and
+    # return it instead of the real top-level answer that follows.
+    runner = _fake_runner(
+        '{"wrapper": {"justificativa": "inner one", "categoria": "inner_match"}, '
+        '"outer_note": "irrelevant"}\n'
+        '{"justificativa": "outer one", "categoria": "outer_match"}'
+    )
+    provider = CliProvider(command=["fake-cli"], runner=runner)
+
+    result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
+
+    assert result.categoria == "outer_match"

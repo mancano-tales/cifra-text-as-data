@@ -96,13 +96,14 @@ class CliProvider(Provider):
 
         CLI output in "best-effort" mode often wraps the answer in prose,
         and that prose can itself contain other JSON-shaped fragments (e.g.
-        a CLI "thinking out loud" about the schema before answering). A
-        naive first-`{`-to-last-`}` regex would splice unrelated fragments
-        together into one invalid blob. Instead, this scans for every
-        top-level JSON object in the text (see `_json_candidates`) and
-        returns the first one that actually validates against `schema` —
-        so an unrelated JSON-shaped fragment earlier in the output is
-        skipped rather than mistaken for the answer.
+        a CLI "thinking out loud" about the schema before answering, or a
+        wrapper object like `{"result": {...}}`). A naive
+        first-`{`-to-last-`}` regex would splice unrelated fragments
+        together into one invalid blob. Instead, this scans the text for
+        each top-level JSON object (see `_json_candidates`) and returns the
+        first one that actually validates against `schema` — so a decoy
+        fragment, or a nested sub-object that happens to also validate, is
+        skipped in favor of the real top-level answer.
         """
         for candidate in CliProvider._json_candidates(text):
             try:
@@ -115,25 +116,33 @@ class CliProvider(Provider):
     @staticmethod
     def _json_candidates(text: str) -> list[str]:
         """Return every top-level `{...}` substring of `text` that is
-        itself valid JSON.
+        itself valid JSON, scanning left to right and skipping past each
+        match found (so a nested `{...}` inside an already-matched object
+        is never re-tried as its own candidate).
 
         Hand-counting braces to find a candidate's span is not
         string-aware: a `{` or `}` inside a JSON string value (e.g. a
         quoted source excerpt or a stray brace in free text) would be
         mistaken for structural nesting and either truncate or extend the
         span incorrectly. Instead, this tries `json.JSONDecoder.raw_decode`
-        at every `{` position — the real JSON parser, which already
-        understands string boundaries, escapes, and nesting correctly —
-        and keeps whichever spans parse successfully.
+        at each unconsumed `{` position — the real JSON parser, which
+        already understands string boundaries, escapes, and nesting
+        correctly. Skipping to the end of every successful parse (rather
+        than trying the next character regardless) keeps candidates
+        top-level only: a CLI response wrapped in a named key like
+        `{"result": {...}}` yields one candidate (the outer object), not
+        also its nested `{...}` value.
         """
         decoder = json.JSONDecoder()
         candidates: list[str] = []
+        skip_until = 0
         for i, ch in enumerate(text):
-            if ch != "{":
+            if i < skip_until or ch != "{":
                 continue
             try:
                 _, end = decoder.raw_decode(text, i)
             except json.JSONDecodeError:
                 continue
             candidates.append(text[i:end])
+            skip_until = end
         return candidates
