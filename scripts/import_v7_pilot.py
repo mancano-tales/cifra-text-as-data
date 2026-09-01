@@ -2,10 +2,17 @@
 into the Codifica SQLite DB, and write the 4 per-hypothesis-side codebook
 YAML files plus a gold-labels CSV for later comparison.
 
-Re-running this script is safe: it skips (and reports) any document whose
-`corpus_id` is already present in `codifica.sqlite`, rather than duplicating
-it. It does NOT pick up changes to already-seeded rows -- delete
-`codifica.sqlite` first to fully reseed from scratch.
+Re-running this script is safe: `corpus_id` (e.g. "v7_pilot_H1") is a
+*shared* grouping key across all evidence rows hand-coded under the same
+hypothesis pair, so it is deliberately NOT unique per document -- a Run
+(Task 8/9) filters documents by `corpus_id` to process a whole pair's
+evidence as a batch. Idempotency dedupes instead on the pair
+(`corpus_id`, `fk_id_ev`) via `DocumentRecord.metadata_json`, so re-running
+after a new evidence row has been hand-coded under an already-seen pair
+still imports the new row, while a truly-already-seen (corpus_id,
+fk_id_ev) pair is skipped and reported. This does NOT pick up changes to
+already-seeded rows -- delete `codifica.sqlite` first to fully reseed from
+scratch.
 
 Usage:
     python scripts/import_v7_pilot.py /path/to/v7_banco_process_tracing_baesiano_abdutivo_manual.xlsx
@@ -14,6 +21,7 @@ Usage:
 from __future__ import annotations
 
 import csv
+import json
 import sys
 from pathlib import Path
 
@@ -114,13 +122,16 @@ def main(xlsx_path: str) -> None:
                 continue
 
             corpus_id = f"v7_pilot_{pair_code}"
-            existing_doc = session.exec(
+            evidence_metadata = json.dumps({"fk_id_ev": row["fk_id_ev"]})
+            existing_docs = session.exec(
                 select(DocumentRecord).where(DocumentRecord.corpus_id == corpus_id)
-            ).first()
+            ).all()
+            existing_doc = next((d for d in existing_docs if d.metadata_json == evidence_metadata), None)
             if existing_doc is not None:
                 print(
-                    f"  skipping seed for {pair_code}: already present in codifica.sqlite "
-                    f"(document id {existing_doc.id}) — delete codifica.sqlite first to reseed from scratch"
+                    f"  skipping seed for {pair_code} evidence {row['fk_id_ev']!r}: already present "
+                    f"in codifica.sqlite (document id {existing_doc.id}) — delete codifica.sqlite first "
+                    "to reseed from scratch"
                 )
                 continue
 
@@ -128,7 +139,7 @@ def main(xlsx_path: str) -> None:
             evidence = tb3_rows[row["fk_id_ev"]]
             text = fix_mojibake(evidence["complete_evidence_content"])
 
-            document = DocumentRecord(corpus_id=corpus_id, text=text)
+            document = DocumentRecord(corpus_id=corpus_id, text=text, metadata_json=evidence_metadata)
             session.add(document)
             session.commit()
             session.refresh(document)
