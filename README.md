@@ -1,92 +1,101 @@
 <!-- 🇺🇸 English — [🇧🇷 versão em português](README.pt-BR.md) -->
 
-# text-as-data
+# cifra-text-as-data — Cifra
 
-A small pipeline for turning unstructured text (news articles, social media
-posts, statements) into a structured table via LLM classification against
-an explicit *codebook* — a theoretical definition of the concept being
-coded — with systematic validation against human-coded labels.
+**Cifra** is a local-first software application and library designed for social scientists (political science, sociology, geography) to code unstructured text (news articles, policy statements, police reports) into categorical variables using Large Language Models (LLMs) against an explicit, theoretical **codebook** — with a first-class validation pipeline against human gold-standard coding.
 
-## Why
+---
 
-Political science (and social science more broadly) has long relied on
-manually reading text and coding it into categorical/free-text columns
-(is this a protest? does this statement support or oppose a given policy?).
-LLMs can automate the coding step, but the real risk is not accuracy — it
-is **construct validity**: does the model actually apply *your*
-operationalization of the concept, or does it fall back on whatever
-generic notion of the concept it picked up in training? (See Halterman &
-Keith, *"Codebook LLMs: Evaluating LLMs as Measurement Tools for Political
-Science Concepts"*, Political Analysis, 2025.)
+## Why Cifra?
 
-This package treats validation against a human-coded sample as a
-first-class step, not an afterthought.
+Social science computational text classification often risks **construct validity**: does the LLM actually apply *your* specific operationalization of a concept (e.g. distinguishing a labor strike from a political protest), or does it default to generic pre-training definitions? (See Halterman & Keith, *"Codebook LLMs: Evaluating LLMs as Measurement Tools for Political Science Concepts"*, *Political Analysis*, 2025.)
+
+Cifra treats validation (Cohen's $\kappa$, Krippendorff's $\alpha$, Gwet's AC1, category-level disagreement analysis) as an essential, non-optional scientific contribution rather than a formality.
+
+---
 
 ## Architecture
 
+Cifra follows a lightweight, local-first **sidecar backend architecture** (Python + FastAPI + SQLite with WAL mode):
+
 ```
-texts.csv (id, text)
-     │
-     ▼
-codebook   — schema (Pydantic model) + theoretical instructions + few-shot examples
-     │
-     ▼
-extraction — calls an LLM via `instructor`, validates the response against the schema
-     │
-     ▼
-validation — compares LLM output against human gold labels (accuracy, Cohen's kappa,
-              list of mismatches for inspection)
+                       ┌──────────────────────────────┐
+                       │   Cifra FastAPI Sidecar API   │
+                       └──────────────┬───────────────┘
+                                      │
+  ┌───────────────────┬───────────────┴───────────────┬───────────────────┐
+  ▼                   ▼                               ▼                   ▼
+┌───────────────┐   ┌───────────────┐               ┌───────────────┐   ┌───────────────┐
+│   Provider    │   │   Ingestion   │               │  Validation   │   │    Storage    │
+│    Engine     │   │    Engine     │               │    Engine     │   │    Engine     │
+│ • Instructor  │   │ • CSV/XLSX    │               │ • Cohen's κ   │   │ • SQLite WAL  │
+│ • Claude CLI  │   │ • Process-Trac│               │ • Kripp. α    │   │ • Trajectory  │
+│ • Ollama      │   │ • UTF-8/ftfy  │               │ • Gwet's AC1  │   │   Audit Log   │
+└───────────────┘   └───────────────┘               └───────────────┘   └───────────────┘
 ```
 
-`codebook` is deliberately separate from `extraction`: the codebook is what
-changes between projects (a land-occupation codebook, a policy-stance
-codebook, a crime-event codebook); the extraction and validation engines
-stay the same.
+- **YAML Codebooks**: Domain experts declare concepts, category definitions, positive/negative examples, and boundary notes in human/LLM-readable YAML files.
+- **Dual Provider Engine**:
+  1. **API-Key Mode**: Guaranteed schema enforcement via `instructor` and Pydantic models over OpenAI, Anthropic, or Gemini APIs.
+  2. **CLI Mode**: Best-effort JSON extraction using flat-rate CLI subscriptions (`claude -p` / `codex exec`) with regex markdown fencing repair and capped 2 retries.
+- **Cost Planning (`plan()`)**: Calculates token count and projects execution cost before running batch extractions.
+- **SQLite Trajectory Audit Log**: Persists raw responses, prompt templates, evidence spans, and timestamps in append-only SQLite tables for peer-review defensibility.
 
-**Out of scope for now**: scraping/collecting raw text from a specific
-source (newspaper, social platform). The pipeline assumes text has already
-been collected into a `texts.csv` (columns: `id`, `text`). See `TODO.md`.
+---
 
-## Install
+## Installation
 
 ```bash
 pip install -e ".[dev]"
 ```
 
+---
+
 ## Quickstart
 
-See `examples/toy_example/` for a complete, runnable (if trivial) example:
-a codebook classifying statements by stance toward a policy, a handful of
-texts, and human gold labels to validate against.
+### 1. Define a YAML Codebook
 
-```python
-import instructor
-import pandas as pd
-from openai import OpenAI
-
-from text_as_data import extract, agreement_report
-from examples.toy_example.codebook import toy_codebook
-
-client = instructor.from_openai(OpenAI())
-texts = pd.read_csv("examples/toy_example/texts.csv")
-gold = pd.read_csv("examples/toy_example/gold.csv")
-
-predicted = extract(texts, toy_codebook, client, model="gpt-4o-mini")
-report = agreement_report(predicted, gold)
+```yaml
+concept: protest
+description: A collective public event expressing a political or social claim.
+categories:
+  - label: protest
+    definition: An occupation, march, or rally with a declared political demand.
+    positive_examples:
+      - "About 200 students marched to city hall square demanding lower fares."
+    negative_examples:
+      - "People gathered for a music festival."
+    boundary_notes: Does not include purely ceremonial parades.
+  - label: not_protest
+    definition: Any event that does not meet the criteria above.
 ```
 
-## Writing your own codebook
+### 2. Python API & Database Setup
 
-A codebook is a `Codebook(schema, instructions, examples)`:
+```python
+from text_as_data.codebook import load_codebook
+from text_as_data.db import init_db
 
-- `schema`: a `pydantic.BaseModel` — one field per output column.
-- `instructions`: the theoretical definition of each category, written the
-  way you would write it for a human coder. Be explicit about edge cases
-  the model is likely to get wrong by falling back on a generic reading
-  (see `examples/toy_example/codebook.py` for a worked instance).
-- `examples`: a handful of (text, expected output) pairs — few-shot
-  examples that pin down exactly the edge cases instructions alone tend to
-  leave ambiguous.
+# 1. Load codebook from YAML
+codebook = load_codebook("codebook.yaml")
+
+# 2. Initialize SQLite database with WAL mode enabled
+engine = init_db()
+```
+
+### 3. Run FastAPI Sidecar Server
+
+```bash
+uvicorn text_as_data.app:app --reload --port 8000
+```
+
+- **Health Check**: `GET http://localhost:8000/health`
+- **Upload Codebook**: `POST http://localhost:8000/codebooks`
+- **Upload Corpus**: `POST http://localhost:8000/documents`
+- **Execute Run**: `POST http://localhost:8000/runs`
+- **Fetch Results**: `GET http://localhost:8000/runs/{run_id}/results`
+
+---
 
 ## Testing
 
@@ -94,7 +103,4 @@ A codebook is a `Codebook(schema, instructions, examples)`:
 pytest
 ```
 
-`tests/` exercises `extraction` and `validation` against a fake LLM client
-(no API key or network access needed). `examples/toy_example/run.py` is the
-one script that hits a real LLM — run it manually when you want to check
-the pipeline end to end.
+Runs the full test suite (40+ tests) across DB models, YAML codebook parsing, CLI provider regex repair, FastAPI endpoints, V7 pilot ingestion, and agreement validation.
