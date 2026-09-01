@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import json
-import re
 import subprocess
 from abc import ABC, abstractmethod
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 
 class Provider(ABC):
@@ -77,7 +76,7 @@ class CliProvider(Provider):
         )
         if result.returncode != 0:
             raise RuntimeError(f"CLI command failed (exit {result.returncode}): {result.stderr}")
-        json_str = self._extract_json(result.stdout)
+        json_str = self._extract_json(result.stdout, schema)
         return schema.model_validate_json(json_str)
 
     @staticmethod
@@ -91,8 +90,45 @@ class CliProvider(Provider):
         return "\n\n".join(parts)
 
     @staticmethod
-    def _extract_json(text: str) -> str:
-        match = re.search(r"\{.*\}", text, re.DOTALL)
-        if not match:
-            raise ValueError(f"no JSON object found in CLI output: {text!r}")
-        return match.group(0)
+    def _extract_json(text: str, schema: type[BaseModel]) -> str:
+        """Find the substring of `text` that is a top-level `{...}` object
+        validating against `schema`, and return it verbatim.
+
+        CLI output in "best-effort" mode often wraps the answer in prose,
+        and that prose can itself contain other JSON-shaped fragments (e.g.
+        a CLI "thinking out loud" about the schema before answering). A
+        naive first-`{`-to-last-`}` regex would splice unrelated fragments
+        together into one invalid blob. Instead, this scans for every
+        top-level `{...}` span (tracking brace depth, so a candidate whose
+        value itself contains nested `{...}` objects isn't truncated at the
+        first inner `}`), and returns the first span that actually
+        validates against `schema` — so an unrelated JSON-shaped fragment
+        earlier in the output is skipped rather than mistaken for the
+        answer.
+        """
+        for candidate in CliProvider._json_candidates(text):
+            try:
+                schema.model_validate_json(candidate)
+            except ValidationError:
+                continue
+            return candidate
+        raise ValueError(f"no JSON object found in CLI output: {text!r}")
+
+    @staticmethod
+    def _json_candidates(text: str) -> list[str]:
+        """Return every top-level `{...}` substring of `text`, tracking
+        brace depth so nested objects don't end a candidate early."""
+        candidates: list[str] = []
+        depth = 0
+        start: int | None = None
+        for i, ch in enumerate(text):
+            if ch == "{":
+                if depth == 0:
+                    start = i
+                depth += 1
+            elif ch == "}" and depth > 0:
+                depth -= 1
+                if depth == 0 and start is not None:
+                    candidates.append(text[start : i + 1])
+                    start = None
+        return candidates

@@ -68,3 +68,20 @@ def test_cli_provider_raises_on_missing_json():
 
     with pytest.raises(ValueError, match="no JSON object found"):
         provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
+
+
+def test_cli_provider_skips_non_matching_json_fragment_before_the_answer():
+    # Realistic "best-effort" CLI output: an earlier JSON-shaped fragment
+    # (e.g. the CLI thinking out loud about the schema) precedes the real
+    # answer. A naive first-`{`-to-last-`}` regex would splice these two
+    # fragments into one invalid blob and raise a confusing
+    # pydantic.ValidationError instead of finding the real answer.
+    runner = _fake_runner(
+        'Let me check the schema first: {"note": "checking the schema"}\n\n'
+        'Here is my answer:\n{"categoria": "protest"}'
+    )
+    provider = CliProvider(command=["fake-cli"], runner=runner)
+
+    result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
+
+    assert result.categoria == "protest"
