@@ -1,5 +1,5 @@
 """Import the 2 usable V7 pilot rows (see docs/superpowers/plans/2026-08-31-slice-1-backend-skeleton.md)
-into the Codifica SQLite DB, and write the 4 per-hypothesis-side codebook
+into the Cifra SQLite DB, and write the 4 per-hypothesis-side codebook
 YAML files plus a gold-labels CSV for later comparison.
 
 Re-running this script is safe: `corpus_id` (e.g. "v7_pilot_H1") is a
