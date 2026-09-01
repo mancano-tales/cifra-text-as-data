@@ -23,6 +23,7 @@ class DocumentRecord(SQLModel, table=True):
     corpus_id: str
     text: str
     metadata_json: str = "{}"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RunRecord(SQLModel, table=True):

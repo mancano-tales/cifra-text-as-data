@@ -81,6 +81,20 @@ def test_in_memory_engine_is_shared_across_threads():
         assert loaded.name == "from_thread"
 
 
+def test_document_created_at_defaults_to_a_real_timestamp():
+    from datetime import datetime
+
+    engine = get_engine("sqlite://")
+
+    with Session(engine, expire_on_commit=False) as session:
+        document = DocumentRecord(corpus_id="test_corpus", text="hello")
+        session.add(document)
+        session.commit()
+        session.refresh(document)
+
+    assert isinstance(document.created_at, datetime)
+
+
 def test_foreign_keys_are_enforced():
     # Regression test: SQLite does not enforce foreign keys unless
     # PRAGMA foreign_keys=ON is set per connection.
