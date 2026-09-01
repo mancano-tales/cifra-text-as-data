@@ -49,32 +49,40 @@ Two screens, no router library needed yet — a simple two-tab layout
 gets added when Screen 3 (Run) makes "navigate to a specific run" a real
 requirement.
 
-## Data model change: `corpora` becomes a real table
+## Data model: `corpus_id` stays a plain string, no new table
 
-Today `DocumentRecord.corpus_id` and `RunRecord.corpus_id` are bare
-strings with no backing entity — Slice 1's V7 import script invents
-strings like `"v7_pilot_H1"` ad hoc. Screen 1 is precisely the place that
-creates corpora, and Screen 1's UI needs to list "your corpora" by a real
-name, so this slice adds:
+Revised during implementation planning (2026-09-01): the original draft of
+this design added a `corpora` table and turned `corpus_id` into a foreign
+key. That would break every existing call site that treats `corpus_id` as
+a free string — `extraction.py`'s document filter, `app.py`'s
+`CreateRunRequest`, `scripts/import_v7_pilot.py`, and the `test_corpus`
+string fixtures across `test_db.py`, `test_app.py`, and
+`test_extraction_run.py` — for a benefit (referential integrity on a field
+nothing deletes or renames yet) this slice doesn't need. YAGNI: **no new
+table.** `corpus_id` remains a `str` everywhere it already is.
 
-```python
-class CorpusRecord(SQLModel, table=True):
-    __tablename__ = "corpora"
-    id: int | None = Field(default=None, primary_key=True)
-    name: str
-    source: str  # "csv" | "xlsx" | "pasted"
-    created_at: datetime = Field(default_factory=...)
+Instead, `GET /corpora` (a new endpoint, not a new table) lists corpora by
+grouping the existing `documents` table:
+
+```sql
+SELECT corpus_id, COUNT(*) AS document_count
+FROM documents
+GROUP BY corpus_id
+ORDER BY MIN(id)
 ```
 
-`DocumentRecord.corpus_id` and `RunRecord.corpus_id` change from `str` to
-`int` (`Field(foreign_key="corpora.id")`). This is a breaking schema
-change, acceptable because `codifica.sqlite` is gitignored, generated,
-local-only data — there is no migration to write, only regeneration.
-Call sites that reference `corpus_id` as a string (`extraction.py`'s
-document filter, `app.py`'s `CreateRunRequest`, `scripts/import_v7_pilot.py`,
-and the tests seeding `corpus_id="test_corpus"`) all need updating to use
-a real `CorpusRecord.id`. `scripts/import_v7_pilot.py` starts creating one
-`CorpusRecord` per hypothesis pair instead of inventing a string.
+`DocumentRecord` gains one additive column, `created_at` (default
+`utcnow`, same pattern as `CodebookRecord.created_at`), so `GET /corpora`
+can order by real creation time instead of `MIN(id)` — purely additive,
+breaks nothing.
+
+The user-supplied `name` on `POST /corpora/csv|xlsx|paste` **is** the
+`corpus_id` written onto each created `DocumentRecord` — there is no
+separate corpus identity to keep in sync. If a `name` already has
+documents under it, the endpoint returns `409` rather than silently
+merging into an existing corpus (avoids surprising partial-duplicate
+imports; re-importing under a new name is the escape hatch, matches the
+"no corpus delete/rename" scope cut below).
 
 ## Backend: new modules and endpoints
 
@@ -100,13 +108,16 @@ YAML version."
 
 **`src/text_as_data/app.py`** new endpoints:
 - `POST /corpora/csv` — multipart upload (file + `name` + `text_column`),
-  creates one `CorpusRecord` + N `DocumentRecord`s from CSV rows
+  creates N `DocumentRecord`s with `corpus_id=name`; `409` if `name` is
+  already used by existing documents
 - `POST /corpora/xlsx` — same, for `.xlsx`
-- `POST /corpora/paste` — JSON `{name, text}`, creates one `CorpusRecord`
-  + 1 `DocumentRecord`
-- `GET /corpora` — list, with a document count per corpus
-- `GET /corpora/{id}/documents` — list documents in a corpus (paginated:
-  `?limit=&offset=`, default limit 50 — the V7 corpus alone is 443 rows)
+- `POST /corpora/paste` — JSON `{name, text}`, creates 1 `DocumentRecord`
+  with `corpus_id=name`; same `409`-on-collision rule
+- `GET /corpora` — list of `{corpus_id, document_count}`, grouped from
+  `documents`, ordered by each corpus's earliest `DocumentRecord.created_at`
+- `GET /corpora/{corpus_id}/documents` — list documents in a corpus
+  (paginated: `?limit=&offset=`, default limit 50 — the V7 corpus alone is
+  443 rows); `corpus_id` is the string name, not a numeric id
 - `POST /codebooks` — JSON body = the spec dict; validates via
   `validate_spec`, stores `yaml_raw = spec_to_yaml_string(spec)`
 - `GET /codebooks` — list (id, name/concept, created_at)
@@ -124,7 +135,7 @@ Slice 3+ concern, not a reason to add complexity here.
 ## Frontend: two screens
 
 **Corpus screen** (`frontend/src/CorpusPage.tsx`): a list of existing
-corpora (name, source, document count) fetched from `GET /corpora`, plus
+corpora (name, document count) fetched from `GET /corpora`, plus
 an import panel with three actions — CSV upload, XLSX upload (both: pick
 file, then a column-name text input for which column is the text, since
 we don't yet parse headers client-side before submit — the column name is
