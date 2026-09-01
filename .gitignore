@@ -11,3 +11,6 @@ venv/
 codifica.sqlite
 codebooks/
 data/
+
+frontend/node_modules/
+frontend/dist/
