@@ -1,5 +1,21 @@
 # NEWS
 
+## 2026-08-31 (2)
+
+- Both open items from the first 2026-08-31 entry resolved: the LLM
+  provider layer is agent-agnostic (CLI mode — Claude Code CLI, Codex CLI,
+  or a generic command adapter, best-effort JSON — alongside the existing
+  API-key/`instructor` mode as the reliable path); and the real pilot data
+  is the `Reforming-TE-PT` Bayesian process-tracing workbook ("V7"),
+  chosen over the simpler Folha relevance-triage pipeline in
+  `Mancano2026-MA-Thesis`. Located, inspected read-only (with explicit
+  root-plan authorization), and found to have only 7 fully human-coded
+  rows (5 with justification) — small but real; proceeding with it for
+  Slice 1 anyway, on the author's call. Also found: text mojibake in the
+  evidence content (fix before use) and an old/new hypothesis-group naming
+  inconsistency in the coded rows. Full detail in `AGENTS.md` §
+  "Real-world pilot data".
+
 ## 2026-08-31
 
 - `AGENTS.md` expanded with the full product vision for evolving this
