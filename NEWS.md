@@ -1,5 +1,13 @@
 # NEWS
 
+## 2026-09-01
+
+- Product journal entry: Analyzed the 9-page research paper "O Banco de Dados da Luta pela Terra (DATALUTA)..." (NERA/UNESP, 2025/2026).
+  Recorded research report in `docs/research/2026-09-01_dataluta_paper_analysis_and_cifra_synergy.md`.
+  Findings: The DATALUTA paper uses BeautifulSoup for metadata, SpaCy NER + RAG for IBGE municipality lookup, and fine-tuned BERTimbau-large for UN SDGs. It achieves only ~50% precision on complex interpretative fields ("Action Purpose"). Cifra (`cifra-text-as-data`) solves this bottleneck using instruction-following YAML codebooks (boundary notes, few-shot examples, rationale, evidence spans) and provides inter-coder agreement validation against DATALUTA's 2021–2023 historical human gold-standard labels.
+- Package and repository name updated to **`cifra-text-as-data`** (`pyproject.toml`, `AGENTS.md`, `README.md`).
+- Working product name officially changed from "Codifica" to **"Cifra"**.
+
 ## 2026-08-31 (2)
 
 - Both open items from the first 2026-08-31 entry resolved: the LLM
