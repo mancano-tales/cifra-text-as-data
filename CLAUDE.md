@@ -159,21 +159,26 @@ packaging step later, not a rewrite:
   makes sense later (like QualiLab's Supabase mode), treat it as v3, after
   desktop packaging.
 
-**LLM provider — OPEN QUESTION, not yet closed** (as of 2026-08-31): the
-author wants the provider layer to be **agent-agnostic**, supporting two
-credential modes side by side rather than API-key-only:
-1. Shelling out to an already-installed CLI the user has a subscription
-   for (e.g. Claude Code CLI, a Codex-style CLI) — no separate metered API
-   key needed if the user already pays for a CLI subscription.
-2. A direct API key (OpenAI and/or Anthropic) via the `instructor` SDK
-   pattern already used in the current toy example.
-This changes the shape of the provider abstraction (`extraction.py`
-currently assumes an `instructor`-patched chat client; a CLI-subprocess
-path needs a different call shape and a different way to enforce
-structured JSON output) and is **not yet designed** — see the open
-questions thread in this repo's session history before implementing it.
-Do not implement Slice 1's provider layer as API-key-only without
-re-confirming this is still open.
+**LLM provider — agent-agnostic (decided 2026-08-31)**: the provider layer
+supports two credential modes side by side, both behind one thin interface
+(`get_client(mode, provider)` or similar — exact shape is Slice 1
+implementation work, not yet written):
+1. **CLI mode**: shells out to an already-installed CLI the user has a
+   subscription for — Claude Code CLI (`claude -p`), a Codex-style CLI
+   (`codex exec`), or a generic configurable "command + prompt template"
+   adapter for anything else compatible. No separate metered API key
+   needed if the user already pays for a CLI subscription. **Best-effort
+   only**: unlike the API-key path, a CLI has no schema-enforcement
+   mechanism equivalent to `instructor`'s function-calling constraint —
+   the prompt asks for JSON, the response is parsed, and malformed output
+   is retried. Accept a higher error rate here; this is the tradeoff for
+   not requiring a billed API key.
+2. **API-key mode**: a direct key (OpenAI and/or Anthropic) via the
+   `instructor` SDK pattern already used in the toy example — the
+   recommended, guaranteed-schema path for real, large coding runs.
+Both modes implement the same interface so `extraction.py` does not care
+which one is active; `codebook.py`'s dynamically-derived Pydantic schema is
+the contract both must honor.
 
 ### Codebook format
 
@@ -246,29 +251,60 @@ The 5-screen MVP is too large for one implementation plan. Build order:
 
 1. **Slice 1 — thin backend skeleton** (in progress): FastAPI + SQLite,
    engine adapted to load the YAML codebook format above and derive the
-   Pydantic schema dynamically, run against the existing toy corpus
-   (`examples/toy_example/`, the `policy_stance` domain — reused as-is for
-   this slice), with minimal caching/retry and a `curl`-testable API. No
+   Pydantic schema dynamically, real pilot data (see below, not the toy
+   example), with minimal caching/retry and a `curl`-testable API. No
    frontend yet — that is Slice 2's job, matching the Phase 1 acceptance
    criterion above ("backend responds via curl with no frontend open").
-   Provider layer for this slice is blocked on the open LLM-provider
-   question above.
 2. **Slice 2+** — one spec/plan per screen (Corpus import, Codebook
    editor, Run + Results, Validation), each building on the skeleton.
 
-### Real-world pilot data (proposed, not yet actioned)
+### Real-world pilot data (located 2026-08-31, in `Reforming-TE-PT`)
 
-The author wants to validate the concept against his own real-world data
-rather than only the toy example, specifically:
-- His master's thesis coding spreadsheet ("V7"), in the
-  `Mancano2026-MA-Thesis` sibling repository.
-- Scraped Folha de São Paulo articles from the `folha-scraper` sibling
-  repository.
+Located across three sibling repositories (`Mancano2026-MA-Thesis`,
+`Reforming-TE-PT`, `folha-scraper` — all read under the explicit
+authorization of `0-meta/plan/2026-08-31_Plano_Desenvolver_App_Codifica_MVP.md`
+WP4 in the root). Chosen pilot: **Option A, the `Reforming-TE-PT`
+Bayesian process-tracing workbook** (not the Folha relevance-triage
+few-shot pipeline in `Mancano2026-MA-Thesis/4-DA-Code/2026-05_Folha_Scraper`,
+which was the simpler alternative).
 
-Both are **separate child repositories** of the `MancanoSync` root, not
-part of `text-as-data`. Per the root `AGENTS.md`, reading from and copying
-data out of another child repo into this one is a cross-repository,
-architectural action that needs a root-level plan in `0-meta/plan/`
-mentioning all three repositories by name before any file is touched in
-`Mancano2026-MA-Thesis` or `folha-scraper` — this has not happened yet as
-of 2026-08-31. Locate the exact files and confirm scope before acting.
+- **Source**: `Reforming-TE-PT/v7_banco_process_tracing_baesiano_abdutivo_manual.xlsx`
+  (documented externally in that repo's `readme_v7_banco_process_tracing.md`
+  — read that file, not the `.xlsx` directly, to understand structure).
+  Operationalizes Fairfield & Charman (2022) Bayesian process tracing: each
+  row of evidence is evaluated against a pair of competing hypotheses on a
+  7-level verbal probability scale (`quase_certa` … `quase_impossivel`).
+- **How this maps onto the Codifica codebook format**: cleanly, no engine
+  redesign needed. `categoria` enum = the 7 verbal-probability labels;
+  `justificativa` = `ek_justificativa_likelihoods` (the human's own
+  reasoning, already the field the workbook's manual calls "the most
+  important"); `trecho_evidencia` ≈ the evidence text itself /
+  `Detalhe_Decisivo`. The same codebook schema runs **twice per evidence
+  row** — once framed "inhabiting" each side of the hypothesis pair (e.g.
+  H1a, then H1b) — producing `prob_e_dado_h1` and `prob_e_dado_h2`.
+- **Corpus**: `tb3_evidence_raw` sheet, column `complete_evidence_content`
+  (443 rows total, Folha articles and other sources from the 1990s–2010s).
+- **Gold labels for validation — small, use anyway (decided 2026-08-31)**:
+  of 999 rows in `tb4_evidence_analisys`, only **7 have both
+  `prob_e_dado_h1` and `prob_e_dado_h2` filled, and only 5 have
+  `ek_justificativa_likelihoods`** — the workbook is still "em coleta", not
+  a finished instrument. Author explicitly chose to proceed with this
+  small set for Slice 1: enough to prove the pipeline runs end-to-end
+  against real data, not enough for a real Cohen's kappa. A validation
+  slice with statistical power waits until more rows are hand-coded.
+  **Known naming inconsistency**: of those 7 rows, most (`4`) use the
+  workbook's *old* hypothesis-group vocabulary (`H_nao_partidaria`, etc.)
+  rather than the current `H1`/`H2`/`H3` numbering the manual documents as
+  current since 2026-06-08 — handle both when joining `tb3`/`tb4`.
+- **Known data-quality issue — mojibake, must fix before use (decided
+  2026-08-31)**: `complete_evidence_content` and other text fields are
+  corrupted (e.g. `institui��es` instead of `instituições`) — a
+  Windows-1252/Latin-1-read-as-something-else bug from the original Folha
+  scrape, not introduced by reading the file. Detect and re-normalize to
+  correct UTF-8 as part of the corpus-import step for this slice, before
+  any text reaches the LLM.
+- **Live-file caution**: a LibreOffice/OnlyOffice lock file
+  (`.~lock.v7_..._manual.xlsx#`) exists next to the workbook, dated
+  2026-08-27 — 4 days old at time of writing, likely stale, but confirm
+  the file is not actually open before writing to it (reading is always
+  safe).
