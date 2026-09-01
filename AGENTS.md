@@ -32,9 +32,9 @@ repo was scaffolded at "light" governance level, same tier as
 > This section captures the author's brief for evolving the current
 > library scaffold into a full application, agreed 2026-08-31. It is the
 > source of truth for scope and architecture until superseded by a dated
-> update to this section. Working product name: **"Codifica"** (placeholder
-> — avoid colliding with existing tools like "Codebook LLMs", which is a
-> paper name, not a product; final name TBD). The package/repo keeps the
+> update to this section. Product name: **"Cifra"** (renamed 2026-09-01,
+> from the earlier placeholder "Codifica" — avoids colliding with existing
+> tools like "Codebook LLMs", which is a paper name, not a product). The package/repo keeps the
 > name `text-as-data`; renaming the repo is a cosmetic decision deferred to
 > later.
 
@@ -301,7 +301,7 @@ which was the simpler alternative).
   Operationalizes Fairfield & Charman (2022) Bayesian process tracing: each
   row of evidence is evaluated against a pair of competing hypotheses on a
   7-level verbal probability scale (`quase_certa` … `quase_impossivel`).
-- **How this maps onto the Codifica codebook format**: cleanly, no engine
+- **How this maps onto the Cifra codebook format**: cleanly, no engine
   redesign needed. `categoria` enum = the 7 verbal-probability labels;
   `justificativa` = `ek_justificativa_likelihoods` (the human's own
   reasoning, already the field the workbook's manual calls "the most

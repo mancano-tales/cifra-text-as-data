@@ -8,7 +8,7 @@ from .db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord, get
 from .extraction import run_extraction
 from .providers import Provider, make_api_key_provider
 
-app = FastAPI(title="Codifica backend (Slice 1)")
+app = FastAPI(title="Cifra backend (Slice 1)")
 
 _engine = get_engine()
 
