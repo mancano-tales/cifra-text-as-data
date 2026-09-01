@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from sqlalchemy import event
+from sqlalchemy.pool import StaticPool
 from sqlmodel import Field, SQLModel, create_engine
 
 
@@ -47,6 +49,17 @@ class ExtractionRecord(SQLModel, table=True):
 
 
 def get_engine(db_url: str = "sqlite:///codifica.sqlite"):
-    engine = create_engine(db_url, connect_args={"check_same_thread": False})
+    is_in_memory = db_url == "sqlite://" or ":memory:" in db_url
+    kwargs = {"poolclass": StaticPool} if is_in_memory else {}
+    engine = create_engine(
+        db_url,
+        connect_args={"check_same_thread": False},
+        **kwargs,
+    )
+
+    @event.listens_for(engine, "connect")
+    def _enable_foreign_keys(dbapi_connection, _connection_record):
+        dbapi_connection.execute("PRAGMA foreign_keys=ON")
+
     SQLModel.metadata.create_all(engine)
     return engine
