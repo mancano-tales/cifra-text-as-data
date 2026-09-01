@@ -32,12 +32,15 @@ def extract(
     return pd.DataFrame(rows)
 
 
+import logging
+
 from sqlmodel import Session, select
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from .db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord
 from .providers import Provider
 
+logger = logging.getLogger(__name__)
 
 ERROR_CATEGORIA = "__error__"
 
@@ -52,55 +55,74 @@ def run_extraction(engine, run_id: int, provider: Provider) -> None:
     extraction if one exists for the same (document, codebook, model), else
     call the provider (with retry) and persist the result. A single
     document's failure is recorded as an error row, not a crash of the
-    whole run."""
+    whole run. A failure *outside* the per-document loop (bad codebook
+    YAML, a database error) marks the run's own status as "error" instead
+    of leaving it stuck at "running" forever — this is the caller's
+    (`app.py`'s `BackgroundTasks`) only signal that something went wrong,
+    since a background task's exception is otherwise just logged and
+    dropped by the ASGI server."""
     with Session(engine) as session:
         run = session.get(RunRecord, run_id)
+        if run is None:
+            raise ValueError(f"run_extraction called with unknown run_id={run_id!r}")
+
         run.status = "running"
         session.add(run)
         session.commit()
 
-        codebook_record = session.get(CodebookRecord, run.codebook_id)
-        codebook = Codebook.from_yaml_string(codebook_record.yaml_raw)
-        documents = session.exec(
-            select(DocumentRecord).where(DocumentRecord.corpus_id == run.corpus_id)
-        ).all()
+        try:
+            codebook_record = session.get(CodebookRecord, run.codebook_id)
+            codebook = Codebook.from_yaml_string(codebook_record.yaml_raw)
+            documents = session.exec(
+                select(DocumentRecord).where(DocumentRecord.corpus_id == run.corpus_id)
+            ).all()
 
-        for document in documents:
-            cached = session.exec(
-                select(ExtractionRecord)
-                .join(RunRecord, ExtractionRecord.run_id == RunRecord.id)
-                .where(
-                    ExtractionRecord.document_id == document.id,
-                    RunRecord.codebook_id == run.codebook_id,
-                    RunRecord.model == run.model,
-                    ExtractionRecord.categoria != ERROR_CATEGORIA,
-                )
-            ).first()
-
-            if cached is not None:
-                categoria, justificativa, trecho = cached.categoria, cached.justificativa, cached.trecho_evidencia
-            else:
-                try:
-                    messages = codebook.build_messages(document.text)
-                    result = _extract_with_retry(provider, messages, codebook.schema)
-                    categoria, justificativa, trecho = (
-                        result.categoria,
-                        result.justificativa,
-                        result.trecho_evidencia,
+            for document in documents:
+                cached = session.exec(
+                    select(ExtractionRecord)
+                    .join(RunRecord, ExtractionRecord.run_id == RunRecord.id)
+                    .where(
+                        ExtractionRecord.document_id == document.id,
+                        RunRecord.codebook_id == run.codebook_id,
+                        RunRecord.model == run.model,
+                        ExtractionRecord.categoria != ERROR_CATEGORIA,
                     )
-                except Exception as exc:  # noqa: BLE001 -- one bad document must not kill the run
-                    categoria, justificativa, trecho = ERROR_CATEGORIA, str(exc), ""
+                ).first()
 
-            session.add(
-                ExtractionRecord(
-                    run_id=run.id,
-                    document_id=document.id,
-                    categoria=categoria,
-                    justificativa=justificativa,
-                    trecho_evidencia=trecho,
+                if cached is not None:
+                    categoria, justificativa, trecho = (
+                        cached.categoria,
+                        cached.justificativa,
+                        cached.trecho_evidencia,
+                    )
+                else:
+                    try:
+                        messages = codebook.build_messages(document.text)
+                        result = _extract_with_retry(provider, messages, codebook.schema)
+                        categoria, justificativa, trecho = (
+                            result.categoria,
+                            result.justificativa,
+                            result.trecho_evidencia,
+                        )
+                    except Exception as exc:  # noqa: BLE001 -- one bad document must not kill the run
+                        categoria, justificativa, trecho = ERROR_CATEGORIA, str(exc), ""
+
+                session.add(
+                    ExtractionRecord(
+                        run_id=run.id,
+                        document_id=document.id,
+                        categoria=categoria,
+                        justificativa=justificativa,
+                        trecho_evidencia=trecho,
+                    )
                 )
-            )
+                session.commit()
+        except Exception:
+            logger.exception("run_extraction failed outside the per-document loop (run_id=%s)", run_id)
+            run.status = "error"
+            session.add(run)
             session.commit()
+            raise
 
         run.status = "done"
         session.add(run)

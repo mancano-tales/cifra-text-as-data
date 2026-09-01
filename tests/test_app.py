@@ -61,3 +61,22 @@ def test_post_runs_with_unknown_codebook_returns_404():
     response = client.post("/runs", json={"codebook_id": 999, "corpus_id": "test_corpus", "model": "fake-model"})
 
     assert response.status_code == 404
+
+
+def test_get_results_for_unknown_run_returns_404():
+    client, _ = _make_test_client()
+
+    response = client.get("/runs/999/results")
+
+    assert response.status_code == 404
+
+
+def test_get_provider_dependency_builds_provider_for_the_requested_model(monkeypatch):
+    from text_as_data.app import CreateRunRequest, get_provider_dependency
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key-not-a-real-secret")
+    request = CreateRunRequest(codebook_id=1, corpus_id="c", model="claude-haiku-4-5")
+
+    provider = get_provider_dependency(request)
+
+    assert provider._model == "claude-haiku-4-5"

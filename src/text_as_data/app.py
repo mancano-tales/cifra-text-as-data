@@ -17,14 +17,18 @@ def get_engine_dependency():
     return _engine
 
 
-def get_provider_dependency() -> Provider:
-    return make_api_key_provider(vendor="anthropic", model="claude-sonnet-5")
-
-
 class CreateRunRequest(BaseModel):
     codebook_id: int
     corpus_id: str
     model: str
+
+
+def get_provider_dependency(request: CreateRunRequest) -> Provider:
+    """Built from the request's own `model`, not a hardcoded constant --
+    Slice 1 only supports the Anthropic API-key vendor, but the model
+    actually invoked must match what's persisted on the `RunRecord` and
+    used as the cache key in `run_extraction`, or both become misleading."""
+    return make_api_key_provider(vendor="anthropic", model=request.model)
 
 
 @app.post("/runs")
@@ -64,5 +68,9 @@ def get_run(run_id: int, engine=Depends(get_engine_dependency)):
 @app.get("/runs/{run_id}/results")
 def get_run_results(run_id: int, engine=Depends(get_engine_dependency)):
     with Session(engine) as session:
+        run = session.get(RunRecord, run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"run {run_id} not found")
+
         rows = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
         return [row.model_dump() for row in rows]

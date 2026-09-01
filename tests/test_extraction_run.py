@@ -1,3 +1,4 @@
+import pytest
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -161,3 +162,36 @@ def test_run_extraction_records_build_messages_failure_as_error_row_without_cras
     # build_messages fails before provider.extract is ever reached, and a
     # build_messages failure must not be pointlessly retried.
     assert provider.calls == 0
+
+
+def test_run_extraction_raises_clear_error_for_unknown_run_id():
+    engine = get_engine("sqlite://")
+
+    with pytest.raises(ValueError, match="unknown run_id"):
+        run_extraction(engine, 999, CountingFakeProvider())
+
+
+def test_run_extraction_marks_run_as_error_on_setup_failure_instead_of_hanging():
+    engine = get_engine("sqlite://")
+    with Session(engine) as session:
+        codebook = CodebookRecord(name="broken", yaml_raw="this is not: [valid, codebook, yaml: at all")
+        session.add(codebook)
+        session.commit()
+        session.refresh(codebook)
+
+        session.add(DocumentRecord(corpus_id="test_corpus", text="document 0"))
+        session.commit()
+
+        run = RunRecord(codebook_id=codebook.id, corpus_id="test_corpus", model="fake-model")
+        session.add(run)
+        session.commit()
+        session.refresh(run)
+        run_id = run.id
+
+    with pytest.raises(Exception):  # noqa: B017 -- exact exception type is YAML-parser-dependent
+        run_extraction(engine, run_id, CountingFakeProvider())
+
+    with Session(engine) as session:
+        run = session.get(RunRecord, run_id)
+        # Not stuck at "running" forever, and not silently "done" either.
+        assert run.status == "error"

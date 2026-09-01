@@ -61,6 +61,26 @@ def _sheet_rows(ws) -> list[dict]:
     return rows
 
 
+def _get_or_create_codebook(
+    session: Session, pair_code: str, side_label: str, hypothesis_name: str, other_side_name: str
+) -> CodebookRecord:
+    """Reuse an existing codebook for this (pair_code, side_label) if one was
+    already seeded -- either earlier in this same import run (a second
+    evidence row hand-coded under a pair already seen this run) or in a
+    prior run of this script. Without this, every kept evidence row would
+    create its own duplicate `CodebookRecord` with the same name/YAML."""
+    name = f"{pair_code}_{side_label}"
+    existing = session.exec(select(CodebookRecord).where(CodebookRecord.name == name)).first()
+    if existing is not None:
+        return existing
+
+    yaml_path = write_codebook_yaml(pair_code, side_label, hypothesis_name, other_side_name)
+    codebook_record = CodebookRecord(name=name, yaml_raw=Path(yaml_path).read_text(encoding="utf-8"))
+    session.add(codebook_record)
+    session.flush()  # assign codebook_record.id without ending the transaction
+    return codebook_record
+
+
 def write_codebook_yaml(pair_code: str, side_label: str, hypothesis_name: str, other_side_name: str) -> str:
     categories = [
         {
@@ -141,21 +161,13 @@ def main(xlsx_path: str) -> None:
 
             document = DocumentRecord(corpus_id=corpus_id, text=text, metadata_json=evidence_metadata)
             session.add(document)
-            session.commit()
-            session.refresh(document)
+            session.flush()  # assign document.id without ending the transaction
 
             for side_label, side_name, other_name, gold_categoria in (
                 ("a", side_a_name, side_b_name, row["prob_e_dado_h1"]),
                 ("b", side_b_name, side_a_name, row["prob_e_dado_h2"]),
             ):
-                yaml_path = write_codebook_yaml(pair_code, side_label, side_name, other_name)
-                codebook_record = CodebookRecord(
-                    name=f"{pair_code}_{side_label}",
-                    yaml_raw=Path(yaml_path).read_text(encoding="utf-8"),
-                )
-                session.add(codebook_record)
-                session.commit()
-                session.refresh(codebook_record)
+                codebook_record = _get_or_create_codebook(session, pair_code, side_label, side_name, other_name)
 
                 gold_rows.append(
                     {
@@ -166,6 +178,12 @@ def main(xlsx_path: str) -> None:
                         "gold_justificativa": fix_mojibake(row.get("ek_justificativa_likelihoods") or ""),
                     }
                 )
+
+            # Commit the document and every codebook/gold entry created for
+            # it as one unit -- a failure partway through no longer leaves a
+            # committed document with missing dependent records that a
+            # later rerun would skip via the idempotency check above.
+            session.commit()
 
     if not gold_rows:
         print("No gold rows produced — nothing to write.")
