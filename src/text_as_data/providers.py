@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from abc import ABC, abstractmethod
 from typing import Any
@@ -61,6 +62,9 @@ class CliProvider(Provider):
     (extraction.py), not this class's."""
 
     def __init__(self, command: list[str], runner=subprocess.run, timeout: int = 180):
+        resolved = shutil.which(command[0])
+        if resolved is not None:
+            command = [resolved, *command[1:]]
         self._command = command
         self._runner = runner
         self._timeout = timeout
@@ -71,7 +75,7 @@ class CliProvider(Provider):
             self._command,
             input=prompt,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=self._timeout,
         )
         if result.returncode != 0:
