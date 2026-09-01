@@ -36,7 +36,9 @@ def build_hypothesis_lookup(tb1_rows: list[dict]) -> dict[str, tuple[str, str]]:
     Only pairs with exactly two rows are included."""
     by_group: dict[int, list[dict]] = {}
     for row in tb1_rows:
-        by_group.setdefault(row["hypothesis_group_id"], []).append(row)
+        # openpyxl often returns numeric cells as floats (e.g. 1.0 instead
+        # of 1); coerce to int so f"H{group_id}" produces "H1", not "H1.0".
+        by_group.setdefault(int(row["hypothesis_group_id"]), []).append(row)
 
     lookup: dict[str, tuple[str, str]] = {}
     for group_id, rows in by_group.items():
