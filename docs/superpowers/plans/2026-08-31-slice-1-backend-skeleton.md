@@ -531,7 +531,14 @@ from text_as_data.db import CodebookRecord, DocumentRecord, ExtractionRecord, Ru
 def test_round_trip_through_all_four_tables():
     engine = get_engine("sqlite://")
 
-    with Session(engine) as session:
+    # expire_on_commit=False: this test holds onto ORM objects (codebook,
+    # document, run, extraction) across multiple `with Session(...)` blocks
+    # to read their attributes later. SQLAlchemy's default
+    # expire_on_commit=True expires every object still in the session on
+    # each commit, so a later attribute read raises DetachedInstanceError
+    # once the session that loaded it has closed. This isn't optional
+    # here — it's required for this exact test shape.
+    with Session(engine, expire_on_commit=False) as session:
         codebook = CodebookRecord(name="h1_a", yaml_raw="concept: x")
         session.add(codebook)
         session.commit()
@@ -558,13 +565,13 @@ def test_round_trip_through_all_four_tables():
         session.commit()
         session.refresh(extraction)
 
-    with Session(engine) as session:
+    with Session(engine, expire_on_commit=False) as session:
         loaded = session.get(ExtractionRecord, extraction.id)
         assert loaded.categoria == "quase_certa"
         assert loaded.run_id == run.id
         assert loaded.document_id == document.id
 
-    with Session(engine) as session:
+    with Session(engine, expire_on_commit=False) as session:
         loaded_run = session.get(RunRecord, run.id)
         assert loaded_run.status == "pending"
         assert loaded_run.codebook_id == codebook.id
