@@ -24,6 +24,47 @@ _CodebookYamlLoader.yaml_implicit_resolvers = {
 }
 
 
+def validate_spec(spec: dict) -> None:
+    """Validate a codebook spec dict -- the shared shape used by both the
+    YAML file format and the structured codebook-editor API. Raises
+    `ValueError` with a human-readable message on the first problem found.
+    Both `Codebook.from_yaml_string` and `spec_to_yaml_string` call this,
+    so the YAML format and the editor's JSON body can never validate
+    differently."""
+    if not spec.get("concept"):
+        raise ValueError("codebook spec missing required field: 'concept'")
+    if not spec.get("description"):
+        raise ValueError("codebook spec missing required field: 'description'")
+    if not spec.get("categories"):
+        raise ValueError("codebook must define at least one category")
+
+    labels = []
+    for category in spec["categories"]:
+        if not category.get("label"):
+            raise ValueError("codebook category missing required field: 'label'")
+        if not category.get("definition"):
+            raise ValueError(f"category {category.get('label')!r} missing required field: 'definition'")
+        labels.append(category["label"])
+
+    if len(set(labels)) != len(labels):
+        raise ValueError(f"duplicate category label in codebook: {labels}")
+
+
+def spec_from_yaml_string(source: str) -> dict:
+    """Parse codebook YAML text into a spec dict, using the bool-safe
+    loader. Used by both `Codebook.from_yaml_string` and by `app.py` to
+    read a stored codebook's spec back for the editor's edit form."""
+    return yaml.load(source, Loader=_CodebookYamlLoader)
+
+
+def spec_to_yaml_string(spec: dict) -> str:
+    """Serialize a codebook spec dict to YAML text in the same shape
+    `spec_from_yaml_string` reads back. Validates first, so a caller never
+    persists an invalid spec as if it were valid YAML."""
+    validate_spec(spec)
+    return yaml.safe_dump(spec, allow_unicode=True, sort_keys=False)
+
+
 @dataclass
 class Codebook:
     """A theoretical construct operationalized as an LLM-extractable schema.
@@ -60,7 +101,7 @@ class Codebook:
 
     @classmethod
     def from_yaml_string(cls, source: str) -> "Codebook":
-        spec = yaml.load(source, Loader=_CodebookYamlLoader)
+        spec = spec_from_yaml_string(source)
         return cls._from_spec(spec)
 
     @classmethod
@@ -70,39 +111,32 @@ class Codebook:
 
     @classmethod
     def _from_spec(cls, spec: dict) -> "Codebook":
-        try:
-            if not spec.get("categories"):
-                raise ValueError("codebook must define at least one category")
+        validate_spec(spec)
 
-            labels = [c["label"] for c in spec["categories"]]
-            if len(set(labels)) != len(labels):
-                raise ValueError(f"duplicate category label in codebook: {labels}")
+        # Fixed contract: `categoria`/`justificativa`/`trecho_evidencia` are
+        # relied on by exact field name elsewhere (e.g. db.py's
+        # ExtractionRecord, run_extraction) — renaming here breaks those
+        # call sites silently via AttributeError, not at this layer.
+        labels = [c["label"] for c in spec["categories"]]
+        schema = create_model(
+            "CodebookExtraction",
+            categoria=(Literal[tuple(labels)], Field(description="One of the codebook's category labels.")),
+            justificativa=(str, Field(description="Free-text rationale for the chosen category.")),
+            trecho_evidencia=(
+                str,
+                Field(description="Verbatim quote from the document that grounds the decision."),
+            ),
+        )
 
-            # Fixed contract: `categoria`/`justificativa`/`trecho_evidencia` are
-            # relied on by exact field name elsewhere (e.g. db.py's
-            # ExtractionRecord, run_extraction) — renaming here breaks those
-            # call sites silently via AttributeError, not at this layer.
-            schema = create_model(
-                "CodebookExtraction",
-                categoria=(Literal[tuple(labels)], Field(description="One of the codebook's category labels.")),
-                justificativa=(str, Field(description="Free-text rationale for the chosen category.")),
-                trecho_evidencia=(
-                    str,
-                    Field(description="Verbatim quote from the document that grounds the decision."),
-                ),
-            )
-
-            lines = [f"Concept: {spec['concept']}", spec["description"].strip(), "", "Categories:"]
-            for c in spec["categories"]:
-                lines.append(f"- {c['label']}: {c['definition'].strip()}")
-                for ex in c.get("positive_examples", []):
-                    lines.append(f'  Positive example: "{ex}"')
-                for ex in c.get("negative_examples", []):
-                    lines.append(f'  Negative example: "{ex}"')
-                if c.get("boundary_notes"):
-                    lines.append(f"  Boundary notes: {c['boundary_notes'].strip()}")
-            instructions = "\n".join(lines)
-        except KeyError as e:
-            raise ValueError(f"codebook spec missing required field: {e}") from e
+        lines = [f"Concept: {spec['concept']}", spec["description"].strip(), "", "Categories:"]
+        for c in spec["categories"]:
+            lines.append(f"- {c['label']}: {c['definition'].strip()}")
+            for ex in c.get("positive_examples", []):
+                lines.append(f'  Positive example: "{ex}"')
+            for ex in c.get("negative_examples", []):
+                lines.append(f'  Negative example: "{ex}"')
+            if c.get("boundary_notes"):
+                lines.append(f"  Boundary notes: {c['boundary_notes'].strip()}")
+        instructions = "\n".join(lines)
 
         return cls(schema=schema, instructions=instructions)

@@ -1,6 +1,7 @@
 import pytest
 
 from text_as_data import Codebook
+from text_as_data.codebook import spec_from_yaml_string, spec_to_yaml_string, validate_spec
 
 YAML_SOURCE = """
 concept: protest
@@ -81,6 +82,60 @@ categories:
 """
     with pytest.raises(ValueError, match="missing required field"):
         Codebook.from_yaml_string(missing_concept_yaml)
+
+
+VALID_SPEC = {
+    "concept": "protest",
+    "description": "A collective, public event.",
+    "categories": [
+        {"label": "protest", "definition": "An occupation, march, or strike."},
+        {"label": "not_protest", "definition": "Any event that does not meet the criteria above."},
+    ],
+}
+
+
+def test_validate_spec_accepts_a_valid_spec():
+    validate_spec(VALID_SPEC)  # must not raise
+
+
+def test_validate_spec_rejects_duplicate_labels():
+    bad_spec = {**VALID_SPEC, "categories": [VALID_SPEC["categories"][0], VALID_SPEC["categories"][0]]}
+    with pytest.raises(ValueError, match="duplicate category label"):
+        validate_spec(bad_spec)
+
+
+def test_validate_spec_rejects_missing_concept():
+    bad_spec = {k: v for k, v in VALID_SPEC.items() if k != "concept"}
+    with pytest.raises(ValueError, match="missing required field"):
+        validate_spec(bad_spec)
+
+
+def test_validate_spec_rejects_category_missing_definition():
+    bad_spec = {**VALID_SPEC, "categories": [{"label": "protest"}]}
+    with pytest.raises(ValueError, match="missing required field"):
+        validate_spec(bad_spec)
+
+
+def test_spec_to_yaml_string_then_spec_from_yaml_string_round_trips():
+    yaml_text = spec_to_yaml_string(VALID_SPEC)
+
+    round_tripped = spec_from_yaml_string(yaml_text)
+
+    assert round_tripped == VALID_SPEC
+
+
+def test_spec_to_yaml_string_rejects_invalid_spec():
+    bad_spec = {**VALID_SPEC, "categories": []}
+    with pytest.raises(ValueError, match="at least one category"):
+        spec_to_yaml_string(bad_spec)
+
+
+def test_codebook_from_yaml_string_works_on_output_of_spec_to_yaml_string():
+    yaml_text = spec_to_yaml_string(VALID_SPEC)
+
+    codebook = Codebook.from_yaml_string(yaml_text)
+
+    assert set(codebook.schema.model_fields["categoria"].annotation.__args__) == {"protest", "not_protest"}
 
 
 def test_from_yaml_file_loads_codebook_from_disk(tmp_path):
