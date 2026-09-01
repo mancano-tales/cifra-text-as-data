@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
+from text_as_data.codebook import Codebook
 from text_as_data.db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord, get_engine
 from text_as_data.extraction import ERROR_CATEGORIA, run_extraction
 from text_as_data.providers import Provider
@@ -135,3 +136,28 @@ def test_run_extraction_does_not_treat_error_row_as_cached():
         extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == second_run_id)).all()
         assert len(extractions) == 1
         assert extractions[0].categoria == "yes"
+
+
+def test_run_extraction_records_build_messages_failure_as_error_row_without_crashing(monkeypatch):
+    def _raise(self, text):
+        raise ValueError("mojibake broke build_messages")
+
+    monkeypatch.setattr(Codebook, "build_messages", _raise)
+
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=2)
+    provider = CountingFakeProvider()
+
+    run_extraction(engine, run_id, provider)
+
+    with Session(engine) as session:
+        extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
+        run = session.get(RunRecord, run_id)
+        # Both documents get an error row instead of crashing the run.
+        assert len(extractions) == 2
+        assert all(e.categoria == ERROR_CATEGORIA for e in extractions)
+        assert all(e.justificativa == "mojibake broke build_messages" for e in extractions)
+        assert run.status == "done"  # not stuck at "running"
+    # build_messages fails before provider.extract is ever reached, and a
+    # build_messages failure must not be pointlessly retried.
+    assert provider.calls == 0

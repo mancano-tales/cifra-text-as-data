@@ -80,8 +80,8 @@ def run_extraction(engine, run_id: int, provider: Provider) -> None:
             if cached is not None:
                 categoria, justificativa, trecho = cached.categoria, cached.justificativa, cached.trecho_evidencia
             else:
-                messages = codebook.build_messages(document.text)
                 try:
+                    messages = codebook.build_messages(document.text)
                     result = _extract_with_retry(provider, messages, codebook.schema)
                     categoria, justificativa, trecho = (
                         result.categoria,
