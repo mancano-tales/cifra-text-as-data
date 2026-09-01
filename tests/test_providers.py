@@ -85,3 +85,23 @@ def test_cli_provider_skips_non_matching_json_fragment_before_the_answer():
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
     assert result.categoria == "protest"
+
+
+def test_cli_provider_handles_unmatched_brace_inside_json_string_value():
+    # Adversarial but realistic: a free-text field (e.g. a quoted source
+    # excerpt) contains a stray unmatched `}` inside the JSON string
+    # itself. A hand-rolled brace-depth counter treats that in-string `}`
+    # as closing the top-level object, producing a truncated, invalid
+    # candidate and never resuming — even though the JSON is perfectly
+    # valid. Preceded by an unrelated decoy fragment to also confirm
+    # schema-validated selection still skips past it.
+    runner = _fake_runner(
+        'Let me check the schema first: {"note": "checking the schema"}\n\n'
+        'Here is my answer:\n'
+        '{"justificativa": "cost > 100} threshold exceeded", "categoria": "protest"}'
+    )
+    provider = CliProvider(command=["fake-cli"], runner=runner)
+
+    result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
+
+    assert result.categoria == "protest"

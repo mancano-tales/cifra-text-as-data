@@ -99,12 +99,10 @@ class CliProvider(Provider):
         a CLI "thinking out loud" about the schema before answering). A
         naive first-`{`-to-last-`}` regex would splice unrelated fragments
         together into one invalid blob. Instead, this scans for every
-        top-level `{...}` span (tracking brace depth, so a candidate whose
-        value itself contains nested `{...}` objects isn't truncated at the
-        first inner `}`), and returns the first span that actually
-        validates against `schema` — so an unrelated JSON-shaped fragment
-        earlier in the output is skipped rather than mistaken for the
-        answer.
+        top-level JSON object in the text (see `_json_candidates`) and
+        returns the first one that actually validates against `schema` —
+        so an unrelated JSON-shaped fragment earlier in the output is
+        skipped rather than mistaken for the answer.
         """
         for candidate in CliProvider._json_candidates(text):
             try:
@@ -116,19 +114,26 @@ class CliProvider(Provider):
 
     @staticmethod
     def _json_candidates(text: str) -> list[str]:
-        """Return every top-level `{...}` substring of `text`, tracking
-        brace depth so nested objects don't end a candidate early."""
+        """Return every top-level `{...}` substring of `text` that is
+        itself valid JSON.
+
+        Hand-counting braces to find a candidate's span is not
+        string-aware: a `{` or `}` inside a JSON string value (e.g. a
+        quoted source excerpt or a stray brace in free text) would be
+        mistaken for structural nesting and either truncate or extend the
+        span incorrectly. Instead, this tries `json.JSONDecoder.raw_decode`
+        at every `{` position — the real JSON parser, which already
+        understands string boundaries, escapes, and nesting correctly —
+        and keeps whichever spans parse successfully.
+        """
+        decoder = json.JSONDecoder()
         candidates: list[str] = []
-        depth = 0
-        start: int | None = None
         for i, ch in enumerate(text):
-            if ch == "{":
-                if depth == 0:
-                    start = i
-                depth += 1
-            elif ch == "}" and depth > 0:
-                depth -= 1
-                if depth == 0 and start is not None:
-                    candidates.append(text[start : i + 1])
-                    start = None
+            if ch != "{":
+                continue
+            try:
+                _, end = decoder.raw_decode(text, i)
+            except json.JSONDecodeError:
+                continue
+            candidates.append(text[i:end])
         return candidates
