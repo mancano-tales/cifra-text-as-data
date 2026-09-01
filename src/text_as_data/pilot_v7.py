@@ -32,7 +32,7 @@ def fix_mojibake(text: str) -> str:
 def build_hypothesis_lookup(tb1_rows: list[dict]) -> dict[str, tuple[str, str]]:
     """Group tb1_hypotheses rows by `hypothesis_group_id` and return
     {pair_code: (side_a_name, side_b_name)} keyed by the pair's number
-    (e.g. "H1"), sorted by pk_hyp_pair_code so side 'a' always comes first.
+    (e.g. "H1"), sorted by pk_hyp__code so side 'a' always comes first.
     Only pairs with exactly two rows are included."""
     by_group: dict[int, list[dict]] = {}
     for row in tb1_rows:
@@ -44,7 +44,7 @@ def build_hypothesis_lookup(tb1_rows: list[dict]) -> dict[str, tuple[str, str]]:
     for group_id, rows in by_group.items():
         if len(rows) != 2:
             continue
-        rows = sorted(rows, key=lambda r: r["pk_hyp_pair_code"])
+        rows = sorted(rows, key=lambda r: r["pk_hyp__code"])
         pair_code = f"H{group_id}"
         lookup[pair_code] = (rows[0]["hypothesis_name"], rows[1]["hypothesis_name"])
     return lookup

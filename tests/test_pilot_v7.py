@@ -18,22 +18,22 @@ def test_fix_mojibake_repairs_corrupted_portuguese_text():
 def test_build_hypothesis_lookup_from_tb1_rows():
     tb1_rows = [
         {
-            "pk_hyp_pair_code": "H1a",
+            "pk_hyp__code": "H1a",
             "hypothesis_name": "Conditional Partisan Expansion",
             "hypothesis_group_id": 1,
         },
         {
-            "pk_hyp_pair_code": "H1b",
+            "pk_hyp__code": "H1b",
             "hypothesis_name": "De-commodification as Redistributive Mechanism",
             "hypothesis_group_id": 1,
         },
         {
-            "pk_hyp_pair_code": "H3a",
+            "pk_hyp__code": "H3a",
             "hypothesis_name": "Ideological Preference for Private Provision",
             "hypothesis_group_id": 3,
         },
         {
-            "pk_hyp_pair_code": "H3b",
+            "pk_hyp__code": "H3b",
             "hypothesis_name": "Path Dependence and Fiscal Constraint",
             "hypothesis_group_id": 3,
         },
@@ -52,22 +52,22 @@ def test_build_hypothesis_lookup_coerces_float_group_id_from_openpyxl():
     # "H1", silently breaking matching against tb4's plain "H1"/"H3" values.
     tb1_rows = [
         {
-            "pk_hyp_pair_code": "H1a",
+            "pk_hyp__code": "H1a",
             "hypothesis_name": "Conditional Partisan Expansion",
             "hypothesis_group_id": 1.0,
         },
         {
-            "pk_hyp_pair_code": "H1b",
+            "pk_hyp__code": "H1b",
             "hypothesis_name": "De-commodification as Redistributive Mechanism",
             "hypothesis_group_id": 1.0,
         },
         {
-            "pk_hyp_pair_code": "H3a",
+            "pk_hyp__code": "H3a",
             "hypothesis_name": "Ideological Preference for Private Provision",
             "hypothesis_group_id": 3.0,
         },
         {
-            "pk_hyp_pair_code": "H3b",
+            "pk_hyp__code": "H3b",
             "hypothesis_name": "Path Dependence and Fiscal Constraint",
             "hypothesis_group_id": 3.0,
         },
