@@ -1,0 +1,53 @@
+{
+  "app": {
+    "title": "Cifra",
+    "tagline": "codificação de texto guiada por codebook",
+    "nav": {
+      "corpus": "Corpus",
+      "codebook": "Codebook"
+    }
+  },
+  "corpus": {
+    "existingTitle": "Corpora existentes",
+    "empty": "Nenhum corpus ainda — importe um abaixo.",
+    "docCount_one": "{{count}} documento",
+    "docCount_other": "{{count}} documentos",
+    "pasteTitle": "Colar texto",
+    "corpusName": "Nome do corpus",
+    "text": "Texto",
+    "add": "Adicionar",
+    "csvTitle": "Enviar CSV",
+    "xlsxTitle": "Enviar XLSX",
+    "textColumn": "Coluna de texto",
+    "file": "Arquivo",
+    "upload": "Enviar"
+  },
+  "codebook": {
+    "listTitle": "Codebooks",
+    "newCodebook": "+ Novo codebook",
+    "none": "Nenhum ainda.",
+    "concept": "Conceito",
+    "description": "Descrição",
+    "category": "Categoria {{n}}",
+    "remove": "Remover",
+    "label": "Rótulo",
+    "definition": "Definição",
+    "positiveExamples": "Exemplos positivos (um por linha)",
+    "negativeExamples": "Exemplos negativos (um por linha)",
+    "boundaryNotes": "Notas de fronteira",
+    "addCategory": "+ Adicionar categoria",
+    "saveChanges": "Salvar alterações",
+    "createCodebook": "Criar codebook",
+    "yamlPreviewTitle": "Pré-visualização YAML",
+    "yamlEmpty": "Salve um codebook para ver o YAML aqui."
+  },
+  "errors": {
+    "badRequest": "Requisição inválida",
+    "notFound": "Não encontrado",
+    "conflict": "Já existe",
+    "validation": "Entrada inválida",
+    "server": "Erro no servidor",
+    "unknown": "Algo deu errado",
+    "details": "Detalhes"
+  }
+}

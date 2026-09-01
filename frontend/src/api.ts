@@ -1,9 +1,21 @@
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
+
+export class ApiError extends Error {
+  status: number;
+  detail: string;
+
+  constructor(status: number, detail: string) {
+    super(detail);
+    this.status = status;
+    this.detail = detail;
+  }
+}
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(body.detail ?? `request failed with status ${response.status}`);
+    const detail = typeof body.detail === "string" ? body.detail : `request failed with status ${response.status}`;
+    throw new ApiError(response.status, detail);
   }
   return response.json() as Promise<T>;
 }

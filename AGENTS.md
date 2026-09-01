@@ -93,8 +93,19 @@ the software, not a secondary form before "the real part".
 
 **Explicitly out of MVP scope** (do not build yet, only keep the
 architecture ready for it): automated scraping of sites/social media,
-model fine-tuning, multi-user/auth, multi-language UI, image/scanned-PDF
-extraction (OCR).
+model fine-tuning, multi-user/auth, image/scanned-PDF extraction (OCR).
+
+**Scope reversal (2026-09-01)**: a bilingual PT-BR/EN UI, originally listed
+above as out of scope, was requested by the author and built the same day
+via `react-i18next` (`frontend/src/i18n.ts`, `frontend/src/locales/`), with
+a language toggle in the app header persisted to `localStorage`. This
+covers static UI copy across both existing screens; backend error `detail`
+strings stay English-only (they carry interpolated identifiers like corpus
+names, not safe to translate word-for-word) — the frontend shows a
+localized generic message keyed off the HTTP status instead, with the raw
+detail kept alongside as untranslated technical context (see
+`frontend/src/errorMessages.ts`). Any new screen must extend this i18n
+setup rather than reintroduce hardcoded English strings.
 
 ### Architecture (closed decision — do not reopen without a strong reason)
 

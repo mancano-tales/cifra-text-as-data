@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { createCorpusFromCsv, createCorpusFromPaste, createCorpusFromXlsx, listCorpora } from "./api";
 import type { CorpusSummary } from "./api";
+import { describeApiError } from "./errorMessages";
 
 export function CorpusPage() {
+  const { t } = useTranslation();
   const [corpora, setCorpora] = useState<CorpusSummary[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const shownError = error ? describeApiError(error, t) : null;
 
   const [pasteName, setPasteName] = useState("");
   const [pasteText, setPasteText] = useState("");
@@ -22,7 +26,7 @@ export function CorpusPage() {
     try {
       setCorpora(await listCorpora());
     } catch (err) {
-      setError((err as Error).message);
+      setError(err);
     }
   }
 
@@ -39,7 +43,7 @@ export function CorpusPage() {
       setPasteText("");
       await refresh();
     } catch (err) {
-      setError((err as Error).message);
+      setError(err);
     }
   }
 
@@ -54,7 +58,7 @@ export function CorpusPage() {
       setCsvFile(null);
       await refresh();
     } catch (err) {
-      setError((err as Error).message);
+      setError(err);
     }
   }
 
@@ -69,24 +73,29 @@ export function CorpusPage() {
       setXlsxFile(null);
       await refresh();
     } catch (err) {
-      setError((err as Error).message);
+      setError(err);
     }
   }
 
   return (
     <div className="screen">
-      {error && <div className="banner-error">{error}</div>}
+      {shownError && (
+        <div className="banner-error">
+          {shownError.message}
+          {shownError.detail && <div className="banner-error-detail">{shownError.detail}</div>}
+        </div>
+      )}
 
       <section className="card">
-        <h2 className="card-title">Existing corpora</h2>
+        <h2 className="card-title">{t("corpus.existingTitle")}</h2>
         {corpora.length === 0 ? (
-          <p className="empty-state">No corpora yet — import one below.</p>
+          <p className="empty-state">{t("corpus.empty")}</p>
         ) : (
           <ul className="corpus-list">
             {corpora.map((c) => (
               <li key={c.corpus_id}>
                 <span className="corpus-id">{c.corpus_id}</span>
-                <span className="pill">{c.document_count} docs</span>
+                <span className="pill">{t("corpus.docCount", { count: c.document_count })}</span>
               </li>
             ))}
           </ul>
@@ -95,10 +104,10 @@ export function CorpusPage() {
 
       <div className="card-grid">
         <form className="card" onSubmit={handlePaste}>
-          <h3 className="card-title">Paste text</h3>
+          <h3 className="card-title">{t("corpus.pasteTitle")}</h3>
           <div className="field">
             <label className="field-label" htmlFor="paste-name">
-              Corpus name
+              {t("corpus.corpusName")}
             </label>
             <input
               id="paste-name"
@@ -109,32 +118,32 @@ export function CorpusPage() {
           </div>
           <div className="field">
             <label className="field-label" htmlFor="paste-text">
-              Text
+              {t("corpus.text")}
             </label>
             <textarea id="paste-text" value={pasteText} onChange={(e) => setPasteText(e.target.value)} required />
           </div>
           <button className="btn btn-primary" type="submit">
-            Add
+            {t("corpus.add")}
           </button>
         </form>
 
         <form className="card" onSubmit={handleCsv}>
-          <h3 className="card-title">Upload CSV</h3>
+          <h3 className="card-title">{t("corpus.csvTitle")}</h3>
           <div className="field">
             <label className="field-label" htmlFor="csv-name">
-              Corpus name
+              {t("corpus.corpusName")}
             </label>
             <input id="csv-name" value={csvName} onChange={(e) => setCsvName(e.target.value)} required />
           </div>
           <div className="field">
             <label className="field-label" htmlFor="csv-column">
-              Text column
+              {t("corpus.textColumn")}
             </label>
             <input id="csv-column" value={csvColumn} onChange={(e) => setCsvColumn(e.target.value)} required />
           </div>
           <div className="field">
             <label className="field-label" htmlFor="csv-file">
-              File
+              {t("corpus.file")}
             </label>
             <input
               id="csv-file"
@@ -145,27 +154,27 @@ export function CorpusPage() {
             />
           </div>
           <button className="btn btn-primary" type="submit">
-            Upload
+            {t("corpus.upload")}
           </button>
         </form>
 
         <form className="card" onSubmit={handleXlsx}>
-          <h3 className="card-title">Upload XLSX</h3>
+          <h3 className="card-title">{t("corpus.xlsxTitle")}</h3>
           <div className="field">
             <label className="field-label" htmlFor="xlsx-name">
-              Corpus name
+              {t("corpus.corpusName")}
             </label>
             <input id="xlsx-name" value={xlsxName} onChange={(e) => setXlsxName(e.target.value)} required />
           </div>
           <div className="field">
             <label className="field-label" htmlFor="xlsx-column">
-              Text column
+              {t("corpus.textColumn")}
             </label>
             <input id="xlsx-column" value={xlsxColumn} onChange={(e) => setXlsxColumn(e.target.value)} required />
           </div>
           <div className="field">
             <label className="field-label" htmlFor="xlsx-file">
-              File
+              {t("corpus.file")}
             </label>
             <input
               id="xlsx-file"
@@ -176,7 +185,7 @@ export function CorpusPage() {
             />
           </div>
           <button className="btn btn-primary" type="submit">
-            Upload
+            {t("corpus.upload")}
           </button>
         </form>
       </div>

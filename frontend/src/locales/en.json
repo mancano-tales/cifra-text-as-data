@@ -1,0 +1,53 @@
+{
+  "app": {
+    "title": "Cifra",
+    "tagline": "codebook-driven text coding",
+    "nav": {
+      "corpus": "Corpus",
+      "codebook": "Codebook"
+    }
+  },
+  "corpus": {
+    "existingTitle": "Existing corpora",
+    "empty": "No corpora yet — import one below.",
+    "docCount_one": "{{count}} doc",
+    "docCount_other": "{{count}} docs",
+    "pasteTitle": "Paste text",
+    "corpusName": "Corpus name",
+    "text": "Text",
+    "add": "Add",
+    "csvTitle": "Upload CSV",
+    "xlsxTitle": "Upload XLSX",
+    "textColumn": "Text column",
+    "file": "File",
+    "upload": "Upload"
+  },
+  "codebook": {
+    "listTitle": "Codebooks",
+    "newCodebook": "+ New codebook",
+    "none": "None yet.",
+    "concept": "Concept",
+    "description": "Description",
+    "category": "Category {{n}}",
+    "remove": "Remove",
+    "label": "Label",
+    "definition": "Definition",
+    "positiveExamples": "Positive examples (one per line)",
+    "negativeExamples": "Negative examples (one per line)",
+    "boundaryNotes": "Boundary notes",
+    "addCategory": "+ Add category",
+    "saveChanges": "Save changes",
+    "createCodebook": "Create codebook",
+    "yamlPreviewTitle": "YAML preview",
+    "yamlEmpty": "Save a codebook to see its YAML here."
+  },
+  "errors": {
+    "badRequest": "Invalid request",
+    "notFound": "Not found",
+    "conflict": "Already exists",
+    "validation": "Invalid input",
+    "server": "Server error",
+    "unknown": "Something went wrong",
+    "details": "Details"
+  }
+}

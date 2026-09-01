@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { createCodebook, getCodebook, listCodebooks, updateCodebook } from "./api";
 import type { CategorySpec, CodebookSpec, CodebookSummary } from "./api";
+import { describeApiError } from "./errorMessages";
 
 const EMPTY_CATEGORY: CategorySpec = {
   label: "",
@@ -16,17 +18,19 @@ function emptySpec(): CodebookSpec {
 }
 
 export function CodebookEditor() {
+  const { t } = useTranslation();
   const [codebooks, setCodebooks] = useState<CodebookSummary[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [spec, setSpec] = useState<CodebookSpec>(emptySpec());
   const [yamlPreview, setYamlPreview] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const shownError = error ? describeApiError(error, t) : null;
 
   async function refreshList() {
     try {
       setCodebooks(await listCodebooks());
     } catch (err) {
-      setError((err as Error).message);
+      setError(err);
     }
   }
 
@@ -52,7 +56,7 @@ export function CodebookEditor() {
       });
       setYamlPreview(detail.yaml_raw);
     } catch (err) {
-      setError((err as Error).message);
+      setError(err);
     }
   }
 
@@ -92,22 +96,27 @@ export function CodebookEditor() {
       setYamlPreview(detail.yaml_raw);
       await refreshList();
     } catch (err) {
-      setError((err as Error).message);
+      setError(err);
     }
   }
 
   return (
     <div className="screen">
-      {error && <div className="banner-error">{error}</div>}
+      {shownError && (
+        <div className="banner-error">
+          {shownError.message}
+          {shownError.detail && <div className="banner-error-detail">{shownError.detail}</div>}
+        </div>
+      )}
 
       <div className="codebook-layout">
         <section className="card">
-          <h2 className="card-title">Codebooks</h2>
+          <h2 className="card-title">{t("codebook.listTitle")}</h2>
           <button type="button" className="btn btn-ghost" onClick={startNew}>
-            + New codebook
+            {t("codebook.newCodebook")}
           </button>
           {codebooks.length === 0 ? (
-            <p className="empty-state">None yet.</p>
+            <p className="empty-state">{t("codebook.none")}</p>
           ) : (
             <ul className="codebook-list">
               {codebooks.map((c) => (
@@ -124,7 +133,7 @@ export function CodebookEditor() {
         <form className="card" onSubmit={handleSave}>
           <div className="field">
             <label className="field-label" htmlFor="concept">
-              Concept
+              {t("codebook.concept")}
             </label>
             <input
               id="concept"
@@ -135,7 +144,7 @@ export function CodebookEditor() {
           </div>
           <div className="field">
             <label className="field-label" htmlFor="description">
-              Description
+              {t("codebook.description")}
             </label>
             <textarea
               id="description"
@@ -150,15 +159,15 @@ export function CodebookEditor() {
           {spec.categories.map((category, index) => (
             <div className="category-card" key={index}>
               <div className="category-card-header">
-                <span className="category-card-title">Category {index + 1}</span>
+                <span className="category-card-title">{t("codebook.category", { n: index + 1 })}</span>
                 {spec.categories.length > 1 && (
                   <button type="button" className="btn-danger-text" onClick={() => removeCategory(index)}>
-                    Remove
+                    {t("codebook.remove")}
                   </button>
                 )}
               </div>
               <div className="field">
-                <label className="field-label">Label</label>
+                <label className="field-label">{t("codebook.label")}</label>
                 <input
                   value={category.label}
                   onChange={(e) => updateCategoryField(index, { label: e.target.value })}
@@ -166,7 +175,7 @@ export function CodebookEditor() {
                 />
               </div>
               <div className="field">
-                <label className="field-label">Definition</label>
+                <label className="field-label">{t("codebook.definition")}</label>
                 <textarea
                   value={category.definition}
                   onChange={(e) => updateCategoryField(index, { definition: e.target.value })}
@@ -174,7 +183,7 @@ export function CodebookEditor() {
                 />
               </div>
               <div className="field">
-                <label className="field-label">Positive examples (one per line)</label>
+                <label className="field-label">{t("codebook.positiveExamples")}</label>
                 <textarea
                   value={category.positive_examples.join("\n")}
                   onChange={(e) =>
@@ -183,7 +192,7 @@ export function CodebookEditor() {
                 />
               </div>
               <div className="field">
-                <label className="field-label">Negative examples (one per line)</label>
+                <label className="field-label">{t("codebook.negativeExamples")}</label>
                 <textarea
                   value={category.negative_examples.join("\n")}
                   onChange={(e) =>
@@ -192,7 +201,7 @@ export function CodebookEditor() {
                 />
               </div>
               <div className="field">
-                <label className="field-label">Boundary notes</label>
+                <label className="field-label">{t("codebook.boundaryNotes")}</label>
                 <textarea
                   value={category.boundary_notes}
                   onChange={(e) => updateCategoryField(index, { boundary_notes: e.target.value })}
@@ -203,20 +212,20 @@ export function CodebookEditor() {
 
           <div className="actions-row">
             <button type="button" className="btn" onClick={addCategory}>
-              + Add category
+              {t("codebook.addCategory")}
             </button>
             <button type="submit" className="btn btn-primary">
-              {editingId ? "Save changes" : "Create codebook"}
+              {editingId ? t("codebook.saveChanges") : t("codebook.createCodebook")}
             </button>
           </div>
         </form>
 
         <section className="card">
-          <h2 className="card-title">YAML preview</h2>
+          <h2 className="card-title">{t("codebook.yamlPreviewTitle")}</h2>
           {yamlPreview ? (
             <pre className="yaml-preview">{yamlPreview}</pre>
           ) : (
-            <p className="empty-state">Save a codebook to see its YAML here.</p>
+            <p className="empty-state">{t("codebook.yamlEmpty")}</p>
           )}
         </section>
       </div>

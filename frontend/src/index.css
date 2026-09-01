@@ -104,6 +104,12 @@ p {
   color: var(--text-muted);
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 /* Segmented tab control, matching QualiLab's top nav */
 
 .seg {
@@ -342,6 +348,13 @@ input[type="file"] {
   border-radius: var(--radius);
   padding: 8px 12px;
   font-size: 13px;
+}
+
+.banner-error-detail {
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  opacity: 0.8;
 }
 
 /* Codebook editor */
