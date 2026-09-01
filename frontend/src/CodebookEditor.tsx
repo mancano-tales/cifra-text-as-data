@@ -97,125 +97,128 @@ export function CodebookEditor() {
   }
 
   return (
-    <div>
-      <h2>Codebook</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
+    <div className="screen">
+      {error && <div className="banner-error">{error}</div>}
 
-      <div style={{ display: "flex", gap: "2rem", alignItems: "flex-start" }}>
-        <div>
-          <h3>Existing codebooks</h3>
-          <button type="button" onClick={startNew}>
+      <div className="codebook-layout">
+        <section className="card">
+          <h2 className="card-title">Codebooks</h2>
+          <button type="button" className="btn btn-ghost" onClick={startNew}>
             + New codebook
           </button>
-          <ul>
-            {codebooks.map((c) => (
-              <li key={c.id}>
-                <button type="button" onClick={() => loadCodebook(c.id)}>
-                  {c.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+          {codebooks.length === 0 ? (
+            <p className="empty-state">None yet.</p>
+          ) : (
+            <ul className="codebook-list">
+              {codebooks.map((c) => (
+                <li key={c.id}>
+                  <button type="button" onClick={() => loadCodebook(c.id)}>
+                    {c.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-        <form onSubmit={handleSave} style={{ flex: 1 }}>
-          <label>
-            Concept
-            <br />
+        <form className="card" onSubmit={handleSave}>
+          <div className="field">
+            <label className="field-label" htmlFor="concept">
+              Concept
+            </label>
             <input
+              id="concept"
               value={spec.concept}
               onChange={(e) => setSpec((prev) => ({ ...prev, concept: e.target.value }))}
               required
             />
-          </label>
-          <br />
-          <label>
-            Description
-            <br />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="description">
+              Description
+            </label>
             <textarea
+              id="description"
               value={spec.description}
               onChange={(e) => setSpec((prev) => ({ ...prev, description: e.target.value }))}
               required
             />
-          </label>
+          </div>
 
-          <h3>Categories</h3>
+          <hr className="section-divider" />
+
           {spec.categories.map((category, index) => (
-            <fieldset key={index}>
-              <legend>Category {index + 1}</legend>
-              <label>
-                Label
-                <br />
+            <div className="category-card" key={index}>
+              <div className="category-card-header">
+                <span className="category-card-title">Category {index + 1}</span>
+                {spec.categories.length > 1 && (
+                  <button type="button" className="btn-danger-text" onClick={() => removeCategory(index)}>
+                    Remove
+                  </button>
+                )}
+              </div>
+              <div className="field">
+                <label className="field-label">Label</label>
                 <input
                   value={category.label}
                   onChange={(e) => updateCategoryField(index, { label: e.target.value })}
                   required
                 />
-              </label>
-              <br />
-              <label>
-                Definition
-                <br />
+              </div>
+              <div className="field">
+                <label className="field-label">Definition</label>
                 <textarea
                   value={category.definition}
                   onChange={(e) => updateCategoryField(index, { definition: e.target.value })}
                   required
                 />
-              </label>
-              <br />
-              <label>
-                Positive examples (one per line)
-                <br />
+              </div>
+              <div className="field">
+                <label className="field-label">Positive examples (one per line)</label>
                 <textarea
                   value={category.positive_examples.join("\n")}
                   onChange={(e) =>
                     updateCategoryField(index, { positive_examples: parseExampleList(e.target.value) })
                   }
                 />
-              </label>
-              <br />
-              <label>
-                Negative examples (one per line)
-                <br />
+              </div>
+              <div className="field">
+                <label className="field-label">Negative examples (one per line)</label>
                 <textarea
                   value={category.negative_examples.join("\n")}
                   onChange={(e) =>
                     updateCategoryField(index, { negative_examples: parseExampleList(e.target.value) })
                   }
                 />
-              </label>
-              <br />
-              <label>
-                Boundary notes
-                <br />
+              </div>
+              <div className="field">
+                <label className="field-label">Boundary notes</label>
                 <textarea
                   value={category.boundary_notes}
                   onChange={(e) => updateCategoryField(index, { boundary_notes: e.target.value })}
                 />
-              </label>
-              <br />
-              {spec.categories.length > 1 && (
-                <button type="button" onClick={() => removeCategory(index)}>
-                  Remove category
-                </button>
-              )}
-            </fieldset>
+              </div>
+            </div>
           ))}
-          <button type="button" onClick={addCategory}>
-            + Add category
-          </button>
 
-          <div>
-            <button type="submit">{editingId ? "Save changes" : "Create codebook"}</button>
+          <div className="actions-row">
+            <button type="button" className="btn" onClick={addCategory}>
+              + Add category
+            </button>
+            <button type="submit" className="btn btn-primary">
+              {editingId ? "Save changes" : "Create codebook"}
+            </button>
           </div>
         </form>
 
-        {yamlPreview && (
-          <div>
-            <h3>YAML preview</h3>
-            <pre>{yamlPreview}</pre>
-          </div>
-        )}
+        <section className="card">
+          <h2 className="card-title">YAML preview</h2>
+          {yamlPreview ? (
+            <pre className="yaml-preview">{yamlPreview}</pre>
+          ) : (
+            <p className="empty-state">Save a codebook to see its YAML here.</p>
+          )}
+        </section>
       </div>
     </div>
   );

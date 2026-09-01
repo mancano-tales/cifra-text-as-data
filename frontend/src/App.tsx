@@ -8,18 +8,25 @@ function App() {
   const [tab, setTab] = useState<Tab>("corpus");
 
   return (
-    <div style={{ maxWidth: "900px", margin: "0 auto", padding: "1rem" }}>
-      <h1>Codifica</h1>
-      <nav>
-        <button onClick={() => setTab("corpus")} disabled={tab === "corpus"}>
-          Corpus
-        </button>{" "}
-        <button onClick={() => setTab("codebook")} disabled={tab === "codebook"}>
-          Codebook
-        </button>
-      </nav>
-      {tab === "corpus" ? <CorpusPage /> : <CodebookEditor />}
-    </div>
+    <>
+      <header className="app-header">
+        <div className="brand">
+          <span className="brand-mark">C</span>
+          <span className="app-title">Cifra</span>
+          <span className="app-tagline">codebook-driven text coding</span>
+        </div>
+        <div className="seg">
+          <button className="seg-btn" disabled={tab === "corpus"} onClick={() => setTab("corpus")}>
+            Corpus
+          </button>
+          <span className="seg-sep" />
+          <button className="seg-btn" disabled={tab === "codebook"} onClick={() => setTab("codebook")}>
+            Codebook
+          </button>
+        </div>
+      </header>
+      <main className="app-main">{tab === "corpus" ? <CorpusPage /> : <CodebookEditor />}</main>
+    </>
   );
 }
 

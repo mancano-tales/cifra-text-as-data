@@ -74,58 +74,112 @@ export function CorpusPage() {
   }
 
   return (
-    <div>
-      <h2>Corpus</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
+    <div className="screen">
+      {error && <div className="banner-error">{error}</div>}
 
-      <h3>Existing corpora</h3>
-      <ul>
-        {corpora.map((c) => (
-          <li key={c.corpus_id}>
-            {c.corpus_id} ({c.document_count} documents)
-          </li>
-        ))}
-      </ul>
+      <section className="card">
+        <h2 className="card-title">Existing corpora</h2>
+        {corpora.length === 0 ? (
+          <p className="empty-state">No corpora yet — import one below.</p>
+        ) : (
+          <ul className="corpus-list">
+            {corpora.map((c) => (
+              <li key={c.corpus_id}>
+                <span className="corpus-id">{c.corpus_id}</span>
+                <span className="pill">{c.document_count} docs</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-      <h3>Paste text</h3>
-      <form onSubmit={handlePaste}>
-        <input
-          placeholder="corpus name"
-          value={pasteName}
-          onChange={(e) => setPasteName(e.target.value)}
-          required
-        />
-        <br />
-        <textarea placeholder="text" value={pasteText} onChange={(e) => setPasteText(e.target.value)} required />
-        <br />
-        <button type="submit">Add</button>
-      </form>
+      <div className="card-grid">
+        <form className="card" onSubmit={handlePaste}>
+          <h3 className="card-title">Paste text</h3>
+          <div className="field">
+            <label className="field-label" htmlFor="paste-name">
+              Corpus name
+            </label>
+            <input
+              id="paste-name"
+              value={pasteName}
+              onChange={(e) => setPasteName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="paste-text">
+              Text
+            </label>
+            <textarea id="paste-text" value={pasteText} onChange={(e) => setPasteText(e.target.value)} required />
+          </div>
+          <button className="btn btn-primary" type="submit">
+            Add
+          </button>
+        </form>
 
-      <h3>Upload CSV</h3>
-      <form onSubmit={handleCsv}>
-        <input placeholder="corpus name" value={csvName} onChange={(e) => setCsvName(e.target.value)} required />
-        <input
-          placeholder="text column name"
-          value={csvColumn}
-          onChange={(e) => setCsvColumn(e.target.value)}
-          required
-        />
-        <input type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)} required />
-        <button type="submit">Upload</button>
-      </form>
+        <form className="card" onSubmit={handleCsv}>
+          <h3 className="card-title">Upload CSV</h3>
+          <div className="field">
+            <label className="field-label" htmlFor="csv-name">
+              Corpus name
+            </label>
+            <input id="csv-name" value={csvName} onChange={(e) => setCsvName(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="csv-column">
+              Text column
+            </label>
+            <input id="csv-column" value={csvColumn} onChange={(e) => setCsvColumn(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="csv-file">
+              File
+            </label>
+            <input
+              id="csv-file"
+              type="file"
+              accept=".csv"
+              onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)}
+              required
+            />
+          </div>
+          <button className="btn btn-primary" type="submit">
+            Upload
+          </button>
+        </form>
 
-      <h3>Upload XLSX</h3>
-      <form onSubmit={handleXlsx}>
-        <input placeholder="corpus name" value={xlsxName} onChange={(e) => setXlsxName(e.target.value)} required />
-        <input
-          placeholder="text column name"
-          value={xlsxColumn}
-          onChange={(e) => setXlsxColumn(e.target.value)}
-          required
-        />
-        <input type="file" accept=".xlsx" onChange={(e) => setXlsxFile(e.target.files?.[0] ?? null)} required />
-        <button type="submit">Upload</button>
-      </form>
+        <form className="card" onSubmit={handleXlsx}>
+          <h3 className="card-title">Upload XLSX</h3>
+          <div className="field">
+            <label className="field-label" htmlFor="xlsx-name">
+              Corpus name
+            </label>
+            <input id="xlsx-name" value={xlsxName} onChange={(e) => setXlsxName(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="xlsx-column">
+              Text column
+            </label>
+            <input id="xlsx-column" value={xlsxColumn} onChange={(e) => setXlsxColumn(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="xlsx-file">
+              File
+            </label>
+            <input
+              id="xlsx-file"
+              type="file"
+              accept=".xlsx"
+              onChange={(e) => setXlsxFile(e.target.files?.[0] ?? null)}
+              required
+            />
+          </div>
+          <button className="btn btn-primary" type="submit">
+            Upload
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
