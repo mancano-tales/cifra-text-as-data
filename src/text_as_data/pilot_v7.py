@@ -31,21 +31,21 @@ def fix_mojibake(text: str) -> str:
 
 def build_hypothesis_lookup(tb1_rows: list[dict]) -> dict[str, tuple[str, str]]:
     """Group tb1_hypotheses rows by `hypothesis_group_id` and return
-    {pair_code: (side_a_name, side_b_name)} keyed by the pair's number
-    (e.g. "H1"), sorted by pk_hyp__code so side 'a' always comes first.
-    Only pairs with exactly two rows are included."""
-    by_group: dict[int, list[dict]] = {}
+    {pair_code: (side_a_name, side_b_name)} keyed by the pair code as it
+    appears in the sheet (e.g. "H1"), sorted by pk_hyp__code so side 'a'
+    always comes first. Only pairs with exactly two rows are included."""
+    by_group: dict[str, list[dict]] = {}
     for row in tb1_rows:
-        # openpyxl often returns numeric cells as floats (e.g. 1.0 instead
-        # of 1); coerce to int so f"H{group_id}" produces "H1", not "H1.0".
-        by_group.setdefault(int(row["hypothesis_group_id"]), []).append(row)
+        # hypothesis_group_id is already the pair code (e.g. "H1") in the
+        # real workbook, not a bare number -- str() is just cheap safety
+        # against a stray non-string cell, not a coercion of numeric data.
+        by_group.setdefault(str(row["hypothesis_group_id"]), []).append(row)
 
     lookup: dict[str, tuple[str, str]] = {}
-    for group_id, rows in by_group.items():
+    for pair_code, rows in by_group.items():
         if len(rows) != 2:
             continue
         rows = sorted(rows, key=lambda r: r["pk_hyp__code"])
-        pair_code = f"H{group_id}"
         lookup[pair_code] = (rows[0]["hypothesis_name"], rows[1]["hypothesis_name"])
     return lookup
 

@@ -16,26 +16,29 @@ def test_fix_mojibake_repairs_corrupted_portuguese_text():
 
 
 def test_build_hypothesis_lookup_from_tb1_rows():
+    # hypothesis_group_id is already the pair code in the real workbook
+    # (e.g. "H1"), not a bare number -- confirmed by direct inspection of
+    # the actual tb1_hypotheses sheet.
     tb1_rows = [
         {
             "pk_hyp__code": "H1a",
             "hypothesis_name": "Conditional Partisan Expansion",
-            "hypothesis_group_id": 1,
+            "hypothesis_group_id": "H1",
         },
         {
             "pk_hyp__code": "H1b",
             "hypothesis_name": "De-commodification as Redistributive Mechanism",
-            "hypothesis_group_id": 1,
+            "hypothesis_group_id": "H1",
         },
         {
             "pk_hyp__code": "H3a",
             "hypothesis_name": "Ideological Preference for Private Provision",
-            "hypothesis_group_id": 3,
+            "hypothesis_group_id": "H3",
         },
         {
             "pk_hyp__code": "H3b",
             "hypothesis_name": "Path Dependence and Fiscal Constraint",
-            "hypothesis_group_id": 3,
+            "hypothesis_group_id": "H3",
         },
     ]
 
@@ -46,37 +49,15 @@ def test_build_hypothesis_lookup_from_tb1_rows():
     assert "H_nao_partidaria" not in lookup
 
 
-def test_build_hypothesis_lookup_coerces_float_group_id_from_openpyxl():
-    # openpyxl often returns numeric cells as floats (e.g. 1.0 instead of
-    # 1). Without coercion, f"H{group_id}" would produce "H1.0" instead of
-    # "H1", silently breaking matching against tb4's plain "H1"/"H3" values.
+def test_build_hypothesis_lookup_with_string_group_ids_matching_real_workbook():
     tb1_rows = [
-        {
-            "pk_hyp__code": "H1a",
-            "hypothesis_name": "Conditional Partisan Expansion",
-            "hypothesis_group_id": 1.0,
-        },
-        {
-            "pk_hyp__code": "H1b",
-            "hypothesis_name": "De-commodification as Redistributive Mechanism",
-            "hypothesis_group_id": 1.0,
-        },
-        {
-            "pk_hyp__code": "H3a",
-            "hypothesis_name": "Ideological Preference for Private Provision",
-            "hypothesis_group_id": 3.0,
-        },
-        {
-            "pk_hyp__code": "H3b",
-            "hypothesis_name": "Path Dependence and Fiscal Constraint",
-            "hypothesis_group_id": 3.0,
-        },
+        {"pk_hyp__code": "H1a", "hypothesis_name": "Side A", "hypothesis_group_id": "H1"},
+        {"pk_hyp__code": "H1b", "hypothesis_name": "Side B", "hypothesis_group_id": "H1"},
     ]
 
     lookup = build_hypothesis_lookup(tb1_rows)
 
-    assert set(lookup.keys()) == {"H1", "H3"}
-    assert "H1.0" not in lookup
+    assert lookup == {"H1": ("Side A", "Side B")}
 
 
 def test_select_gold_rows_keeps_only_resolvable_pairs_with_both_probs():
