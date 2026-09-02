@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { exportRunUrl, updateExtraction } from "./api";
 import type { ExtractionResult } from "./api";
+import { ValidationPanel } from "./ValidationPanel";
 
 interface ResultsTableProps {
   runId: number;
@@ -159,6 +160,8 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
           </tbody>
         </table>
       )}
+
+      <ValidationPanel runId={runId} onError={onError} />
     </div>
   );
 }

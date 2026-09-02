@@ -76,6 +76,21 @@
     "unknownCategory": "{{value}} (não é um rótulo atual do codebook)",
     "noResults": "Nenhum resultado corresponde a este filtro."
   },
+  "validation": {
+    "title": "Validar",
+    "coverage": "{{labeled}} de {{total}} documentos têm rótulo padrão-ouro",
+    "excluded": "{{count}} excluídos (múltiplos coders)",
+    "colCategory": "Categoria",
+    "colPrecision": "Precisão",
+    "colRecall": "Recall",
+    "colF1": "F1",
+    "colPredicted": "Previsto",
+    "colGold": "Padrão-ouro",
+    "overall": "Acurácia geral {{accuracy}}, kappa {{kappa}}",
+    "kappaUndefined": "indefinido (categoria única)",
+    "uploadLabel": "Enviar CSV com rótulos padrão-ouro",
+    "upload": "Enviar rótulos padrão-ouro"
+  },
   "errors": {
     "badRequest": "Requisição inválida",
     "notFound": "Não encontrado",

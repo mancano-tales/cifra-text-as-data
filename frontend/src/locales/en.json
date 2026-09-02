@@ -76,6 +76,21 @@
     "unknownCategory": "{{value}} (not a current codebook label)",
     "noResults": "No results match this filter."
   },
+  "validation": {
+    "title": "Validate",
+    "coverage": "{{labeled}} of {{total}} documents have a gold label",
+    "excluded": "{{count}} excluded (multiple coders)",
+    "colCategory": "Category",
+    "colPrecision": "Precision",
+    "colRecall": "Recall",
+    "colF1": "F1",
+    "colPredicted": "Predicted",
+    "colGold": "Gold",
+    "overall": "Overall accuracy {{accuracy}}, kappa {{kappa}}",
+    "kappaUndefined": "undefined (single label)",
+    "uploadLabel": "Upload gold-labeled CSV",
+    "upload": "Upload gold labels"
+  },
   "errors": {
     "badRequest": "Invalid request",
     "notFound": "Not found",
