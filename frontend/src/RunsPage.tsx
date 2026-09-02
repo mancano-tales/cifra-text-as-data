@@ -96,8 +96,18 @@ export function RunsPage() {
         setCodebookLabels(codebookDetail.spec.categories.map((c) => c.label));
       }
     } catch (err) {
+      if (isStale(token)) return;
+      if (pollRef.current) {
+        // A transient failure (network blip, brief backend hiccup) during
+        // an already-established poll must not kill polling for a run
+        // that's still actually running -- skip this tick silently and
+        // let the next interval fire retry. Only the *initial* load (no
+        // interval established yet) surfaces the error, since without an
+        // interval nothing would ever recover on its own.
+        return;
+      }
       stopPolling();
-      if (!isStale(token)) setError(err);
+      setError(err);
     }
   }
 
@@ -126,7 +136,17 @@ export function RunsPage() {
       const runList = await listRuns();
       setRuns(runList);
       const run = runList.find((r) => r.id === runId);
-      if (run) selectRun(run);
+      if (run) {
+        selectRun(run);
+      } else {
+        // Should be unreachable -- POST /runs commits the RunRecord before
+        // returning run_id, so the very next listRuns() should always see
+        // it. Surfacing an error instead of silently no-op'ing if it ever
+        // isn't makes that assumption visible rather than leaving the user
+        // staring at a run list that doesn't show the run they just
+        // started, with no explanation.
+        setError(new Error(`run ${runId} was created but not found in the run list`));
+      }
     } catch (err) {
       setError(err);
     }

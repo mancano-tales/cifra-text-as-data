@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { createCodebook, getCodebook, listCodebooks, updateCodebook } from "./api";
@@ -26,6 +26,14 @@ export function CodebookEditor() {
   const [error, setError] = useState<unknown>(null);
   const shownError = error ? describeApiError(error, t) : null;
 
+  // If the user clicks a different codebook in the list while a previous
+  // loadCodebook() request is still in flight, that earlier response would
+  // otherwise land after the newer one and silently overwrite the editor
+  // with the wrong codebook's data. Every selection bumps the token; a
+  // resolved request only applies its result if the token it was issued
+  // under still matches (mirrors RunsPage's selectionTokenRef).
+  const selectionTokenRef = useRef(0);
+
   async function refreshList() {
     try {
       setCodebooks(await listCodebooks());
@@ -40,8 +48,11 @@ export function CodebookEditor() {
 
   async function loadCodebook(id: number) {
     setError(null);
+    selectionTokenRef.current += 1;
+    const token = selectionTokenRef.current;
     try {
       const detail = await getCodebook(id);
+      if (token !== selectionTokenRef.current) return;
       setEditingId(detail.id);
       setSpec({
         concept: detail.spec.concept,
@@ -56,11 +67,13 @@ export function CodebookEditor() {
       });
       setYamlPreview(detail.yaml_raw);
     } catch (err) {
+      if (token !== selectionTokenRef.current) return;
       setError(err);
     }
   }
 
   function startNew() {
+    selectionTokenRef.current += 1;
     setEditingId(null);
     setSpec(emptySpec());
     setYamlPreview(null);
@@ -83,14 +96,33 @@ export function CodebookEditor() {
   }
 
   function parseExampleList(raw: string): string[] {
-    return raw.split("\n").filter((line) => line.trim() !== "");
+    // Deliberately does NOT filter out blank lines here. This is a
+    // controlled textarea whose `value` is `examples.join("\n")` -- if
+    // onChange filtered blank lines on every keystroke, pressing Enter to
+    // start a new line would immediately produce an empty trailing array
+    // element, get filtered out on the very next render, and the newline
+    // the user just typed would vanish. Blank lines are stripped once, in
+    // handleSave, instead.
+    return raw.split("\n");
+  }
+
+  function stripBlankExamples(spec: CodebookSpec): CodebookSpec {
+    return {
+      ...spec,
+      categories: spec.categories.map((c) => ({
+        ...c,
+        positive_examples: c.positive_examples.filter((line) => line.trim() !== ""),
+        negative_examples: c.negative_examples.filter((line) => line.trim() !== ""),
+      })),
+    };
   }
 
   async function handleSave(event: FormEvent) {
     event.preventDefault();
     setError(null);
     try {
-      const result = editingId ? await updateCodebook(editingId, spec) : await createCodebook(spec);
+      const cleanedSpec = stripBlankExamples(spec);
+      const result = editingId ? await updateCodebook(editingId, cleanedSpec) : await createCodebook(cleanedSpec);
       const detail = await getCodebook(result.id);
       setEditingId(detail.id);
       setYamlPreview(detail.yaml_raw);
@@ -167,24 +199,33 @@ export function CodebookEditor() {
                 )}
               </div>
               <div className="field">
-                <label className="field-label">{t("codebook.label")}</label>
+                <label className="field-label" htmlFor={`category-${index}-label`}>
+                  {t("codebook.label")}
+                </label>
                 <input
+                  id={`category-${index}-label`}
                   value={category.label}
                   onChange={(e) => updateCategoryField(index, { label: e.target.value })}
                   required
                 />
               </div>
               <div className="field">
-                <label className="field-label">{t("codebook.definition")}</label>
+                <label className="field-label" htmlFor={`category-${index}-definition`}>
+                  {t("codebook.definition")}
+                </label>
                 <textarea
+                  id={`category-${index}-definition`}
                   value={category.definition}
                   onChange={(e) => updateCategoryField(index, { definition: e.target.value })}
                   required
                 />
               </div>
               <div className="field">
-                <label className="field-label">{t("codebook.positiveExamples")}</label>
+                <label className="field-label" htmlFor={`category-${index}-positive-examples`}>
+                  {t("codebook.positiveExamples")}
+                </label>
                 <textarea
+                  id={`category-${index}-positive-examples`}
                   value={category.positive_examples.join("\n")}
                   onChange={(e) =>
                     updateCategoryField(index, { positive_examples: parseExampleList(e.target.value) })
@@ -192,8 +233,11 @@ export function CodebookEditor() {
                 />
               </div>
               <div className="field">
-                <label className="field-label">{t("codebook.negativeExamples")}</label>
+                <label className="field-label" htmlFor={`category-${index}-negative-examples`}>
+                  {t("codebook.negativeExamples")}
+                </label>
                 <textarea
+                  id={`category-${index}-negative-examples`}
                   value={category.negative_examples.join("\n")}
                   onChange={(e) =>
                     updateCategoryField(index, { negative_examples: parseExampleList(e.target.value) })
@@ -201,8 +245,11 @@ export function CodebookEditor() {
                 />
               </div>
               <div className="field">
-                <label className="field-label">{t("codebook.boundaryNotes")}</label>
+                <label className="field-label" htmlFor={`category-${index}-boundary-notes`}>
+                  {t("codebook.boundaryNotes")}
+                </label>
                 <textarea
+                  id={`category-${index}-boundary-notes`}
                   value={category.boundary_notes}
                   onChange={(e) => updateCategoryField(index, { boundary_notes: e.target.value })}
                 />

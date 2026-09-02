@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { createCorpusFromCsv, createCorpusFromPaste, createCorpusFromXlsx, listCorpora } from "./api";
@@ -22,6 +22,21 @@ export function CorpusPage() {
   const [xlsxColumn, setXlsxColumn] = useState("");
   const [xlsxFile, setXlsxFile] = useState<File | null>(null);
 
+  // One flag per form -- a double-click (or a slow upload) on one form
+  // must not block the other two, unrelated forms.
+  const [pasteSubmitting, setPasteSubmitting] = useState(false);
+  const [csvSubmitting, setCsvSubmitting] = useState(false);
+  const [xlsxSubmitting, setXlsxSubmitting] = useState(false);
+
+  // `setCsvFile(null)`/`setXlsxFile(null)` alone leaves the native file
+  // input showing its last-picked filename -- browsers only let a file
+  // input's `value` be programmatically set to `""`, never restored from
+  // state, so the displayed filename and the (cleared) React state
+  // silently drift apart after a successful upload unless the DOM
+  // element itself is reset too.
+  const csvFileInputRef = useRef<HTMLInputElement>(null);
+  const xlsxFileInputRef = useRef<HTMLInputElement>(null);
+
   async function refresh() {
     try {
       setCorpora(await listCorpora());
@@ -36,7 +51,9 @@ export function CorpusPage() {
 
   async function handlePaste(event: FormEvent) {
     event.preventDefault();
+    if (pasteSubmitting) return;
     setError(null);
+    setPasteSubmitting(true);
     try {
       await createCorpusFromPaste(pasteName, pasteText);
       setPasteName("");
@@ -44,36 +61,48 @@ export function CorpusPage() {
       await refresh();
     } catch (err) {
       setError(err);
+    } finally {
+      setPasteSubmitting(false);
     }
   }
 
   async function handleCsv(event: FormEvent) {
     event.preventDefault();
+    if (csvSubmitting) return;
     setError(null);
     if (!csvFile) return;
+    setCsvSubmitting(true);
     try {
       await createCorpusFromCsv(csvName, csvColumn, csvFile);
       setCsvName("");
       setCsvColumn("");
       setCsvFile(null);
+      if (csvFileInputRef.current) csvFileInputRef.current.value = "";
       await refresh();
     } catch (err) {
       setError(err);
+    } finally {
+      setCsvSubmitting(false);
     }
   }
 
   async function handleXlsx(event: FormEvent) {
     event.preventDefault();
+    if (xlsxSubmitting) return;
     setError(null);
     if (!xlsxFile) return;
+    setXlsxSubmitting(true);
     try {
       await createCorpusFromXlsx(xlsxName, xlsxColumn, xlsxFile);
       setXlsxName("");
       setXlsxColumn("");
       setXlsxFile(null);
+      if (xlsxFileInputRef.current) xlsxFileInputRef.current.value = "";
       await refresh();
     } catch (err) {
       setError(err);
+    } finally {
+      setXlsxSubmitting(false);
     }
   }
 
@@ -122,7 +151,7 @@ export function CorpusPage() {
             </label>
             <textarea id="paste-text" value={pasteText} onChange={(e) => setPasteText(e.target.value)} required />
           </div>
-          <button className="btn btn-primary" type="submit">
+          <button className="btn btn-primary" type="submit" disabled={pasteSubmitting}>
             {t("corpus.add")}
           </button>
         </form>
@@ -147,13 +176,14 @@ export function CorpusPage() {
             </label>
             <input
               id="csv-file"
+              ref={csvFileInputRef}
               type="file"
               accept=".csv"
               onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)}
               required
             />
           </div>
-          <button className="btn btn-primary" type="submit">
+          <button className="btn btn-primary" type="submit" disabled={csvSubmitting}>
             {t("corpus.upload")}
           </button>
         </form>
@@ -178,13 +208,14 @@ export function CorpusPage() {
             </label>
             <input
               id="xlsx-file"
+              ref={xlsxFileInputRef}
               type="file"
               accept=".xlsx"
               onChange={(e) => setXlsxFile(e.target.files?.[0] ?? null)}
               required
             />
           </div>
-          <button className="btn btn-primary" type="submit">
+          <button className="btn btn-primary" type="submit" disabled={xlsxSubmitting}>
             {t("corpus.upload")}
           </button>
         </form>

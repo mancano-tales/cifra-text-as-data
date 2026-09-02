@@ -65,54 +65,72 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
           {t("runs.exportJson")}
         </a>
       </div>
-      <table className="results-table">
-        <thead>
-          <tr>
-            <th>{t("runs.colDocument")}</th>
-            <th>{t("runs.colCategory")}</th>
-            <th>{t("runs.colJustification")}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredResults.map((row) => (
-            <tr key={row.id}>
-              <td>{row.document_snippet}</td>
-              <td>
-                {editingId === row.id ? (
-                  <select value={editCategoria} onChange={(e) => setEditCategoria(e.target.value)}>
-                    {codebookLabels.map((label) => (
-                      <option key={label} value={label}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <span className="pill">{row.categoria}</span>
-                )}
-              </td>
-              <td>
-                {editingId === row.id ? (
-                  <textarea value={editJustificativa} onChange={(e) => setEditJustificativa(e.target.value)} />
-                ) : (
-                  row.justificativa
-                )}
-              </td>
-              <td>
-                {editingId === row.id ? (
-                  <button type="button" className="btn" onClick={() => saveEdit(row)}>
-                    {t("runs.save")}
-                  </button>
-                ) : (
-                  <button type="button" className="btn-danger-text" onClick={() => startEdit(row)}>
-                    {t("runs.edit")}
-                  </button>
-                )}
-              </td>
+      {filteredResults.length === 0 ? (
+        <p className="empty-state">{t("runs.noResults")}</p>
+      ) : (
+        <table className="results-table">
+          <thead>
+            <tr>
+              <th>{t("runs.colDocument")}</th>
+              <th>{t("runs.colCategory")}</th>
+              <th>{t("runs.colJustification")}</th>
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filteredResults.map((row) => (
+              <tr key={row.id}>
+                <td>{row.document_snippet}</td>
+                <td>
+                  {editingId === row.id ? (
+                    <select value={editCategoria} onChange={(e) => setEditCategoria(e.target.value)}>
+                      {/* row.categoria can be a value not in codebookLabels -- the
+                          "__error__" sentinel, or a label since removed from the
+                          codebook. A <select> whose value matches no <option>
+                          silently falls back to displaying the first option as
+                          selected while the underlying state stays unchanged, so
+                          clicking Save without noticing would submit the
+                          original (invalid) value with no visible warning.
+                          Surfacing it as its own option keeps what's displayed
+                          in sync with what would actually be saved. */}
+                      {!codebookLabels.includes(editCategoria) && (
+                        <option value={editCategoria}>
+                          {t("runs.unknownCategory", { value: editCategoria })}
+                        </option>
+                      )}
+                      {codebookLabels.map((label) => (
+                        <option key={label} value={label}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="pill">{row.categoria}</span>
+                  )}
+                </td>
+                <td>
+                  {editingId === row.id ? (
+                    <textarea value={editJustificativa} onChange={(e) => setEditJustificativa(e.target.value)} />
+                  ) : (
+                    row.justificativa
+                  )}
+                </td>
+                <td>
+                  {editingId === row.id ? (
+                    <button type="button" className="btn" onClick={() => saveEdit(row)}>
+                      {t("runs.save")}
+                    </button>
+                  ) : (
+                    <button type="button" className="btn-danger-text" onClick={() => startEdit(row)}>
+                      {t("runs.edit")}
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

@@ -19,9 +19,11 @@ export function RunForm({ corpora, codebooks, onCreated, onError }: RunFormProps
   const [providerMode, setProviderMode] = useState<"api_key" | "cli">("api_key");
   const [cliCommand, setCliCommand] = useState("claude -p");
   const [cliPromptMode, setCliPromptMode] = useState<"stdin" | "arg">("stdin");
+  const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (submitting) return;
     const trimmedModel = model.trim();
     if (!trimmedModel) {
       onError(new Error("Model cannot be empty."));
@@ -32,6 +34,7 @@ export function RunForm({ corpora, codebooks, onCreated, onError }: RunFormProps
       onError(new Error("CLI command cannot be empty."));
       return;
     }
+    setSubmitting(true);
     try {
       const { run_id } = await createRun({
         codebook_id: Number(codebookId),
@@ -43,6 +46,8 @@ export function RunForm({ corpora, codebooks, onCreated, onError }: RunFormProps
       await onCreated(run_id);
     } catch (err) {
       onError(err);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -101,7 +106,7 @@ export function RunForm({ corpora, codebooks, onCreated, onError }: RunFormProps
           </div>
         </>
       )}
-      <button type="submit" className="btn btn-primary">
+      <button type="submit" className="btn btn-primary" disabled={submitting}>
         {t("runs.start")}
       </button>
     </form>

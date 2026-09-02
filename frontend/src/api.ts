@@ -11,10 +11,31 @@ export class ApiError extends Error {
   }
 }
 
+function describeErrorDetail(detail: unknown, status: number): string {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    // FastAPI's own 422 request-validation errors shape `detail` as a list
+    // of {loc, msg, type} objects, not a string -- e.g. a required field
+    // missing from the request body. Falling through to the generic
+    // "request failed with status 422" message here would discard exactly
+    // which field was wrong.
+    const messages = detail
+      .map((item) => (item && typeof item === "object" && "msg" in item ? String((item as { msg: unknown }).msg) : null))
+      .filter((msg): msg is string => msg !== null);
+    if (messages.length > 0) return messages.join("; ");
+  }
+  if (detail && typeof detail === "object") {
+    // A handful of endpoints (e.g. the QualiLab label-import 422) raise a
+    // structured object detail instead of a list or a string.
+    return JSON.stringify(detail);
+  }
+  return `request failed with status ${status}`;
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => ({ detail: response.statusText }));
-    const detail = typeof body.detail === "string" ? body.detail : `request failed with status ${response.status}`;
+    const detail = describeErrorDetail(body.detail, response.status);
     throw new ApiError(response.status, detail);
   }
   return response.json() as Promise<T>;

@@ -69,7 +69,9 @@
     "colCategory": "Categoria",
     "colJustification": "Justificativa",
     "edit": "Editar",
-    "save": "Salvar"
+    "save": "Salvar",
+    "unknownCategory": "{{value}} (não é um rótulo atual do codebook)",
+    "noResults": "Nenhum resultado corresponde a este filtro."
   },
   "errors": {
     "badRequest": "Requisição inválida",

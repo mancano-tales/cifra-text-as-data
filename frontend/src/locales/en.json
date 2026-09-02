@@ -69,7 +69,9 @@
     "colCategory": "Category",
     "colJustification": "Justification",
     "edit": "Edit",
-    "save": "Save"
+    "save": "Save",
+    "unknownCategory": "{{value}} (not a current codebook label)",
+    "noResults": "No results match this filter."
   },
   "errors": {
     "badRequest": "Invalid request",
