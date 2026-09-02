@@ -296,6 +296,8 @@ input[type="file"] {
   border: 0.8px solid var(--border);
   background: var(--surface);
   color: var(--text);
+  text-decoration: none;
+  display: inline-block;
 }
 
 .btn:hover {
@@ -446,4 +448,57 @@ input[type="file"] {
   gap: 8px;
   align-items: center;
   margin-top: 16px;
+}
+
+/* Runs screen */
+
+.runs-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .runs-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.progress-track {
+  background: var(--bg);
+  border: 0.8px solid var(--border);
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.progress-fill {
+  background: var(--accent);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  margin-top: 12px;
+}
+
+.results-table th,
+.results-table td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 0.8px solid var(--border);
+  vertical-align: top;
+}
+
+.results-table th {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
