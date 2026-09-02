@@ -113,3 +113,84 @@ export async function updateCodebook(id: number, spec: CodebookSpec): Promise<{ 
   });
   return handleResponse(response);
 }
+
+export interface RunSummary {
+  id: number;
+  corpus_id: string;
+  codebook_id: number;
+  codebook_name: string;
+  model: string;
+  status: string;
+  processed: number;
+  total: number;
+  created_at: string;
+}
+
+export interface RunStatus {
+  id: number;
+  status: string;
+  processed: number;
+  total: number;
+}
+
+export interface ExtractionResult {
+  id: number;
+  run_id: number;
+  document_id: number;
+  categoria: string;
+  justificativa: string;
+  trecho_evidencia: string;
+  tokens_used: number | null;
+  document_snippet: string;
+}
+
+export interface CreateRunRequest {
+  codebook_id: number;
+  corpus_id: string;
+  model: string;
+  provider_mode: "api_key" | "cli";
+  cli_command?: string[];
+  cli_prompt_mode?: "stdin" | "arg";
+}
+
+export async function listRuns(): Promise<RunSummary[]> {
+  const response = await fetch(`${API_BASE}/runs`);
+  return handleResponse(response);
+}
+
+export async function getRun(id: number): Promise<RunStatus> {
+  const response = await fetch(`${API_BASE}/runs/${id}`);
+  return handleResponse(response);
+}
+
+export async function getRunResults(id: number): Promise<ExtractionResult[]> {
+  const response = await fetch(`${API_BASE}/runs/${id}/results`);
+  return handleResponse(response);
+}
+
+export async function createRun(request: CreateRunRequest): Promise<{ run_id: number }> {
+  const response = await fetch(`${API_BASE}/runs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  return handleResponse(response);
+}
+
+export async function updateExtraction(
+  runId: number,
+  extractionId: number,
+  categoria: string,
+  justificativa: string
+): Promise<ExtractionResult> {
+  const response = await fetch(`${API_BASE}/runs/${runId}/results/${extractionId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ categoria, justificativa }),
+  });
+  return handleResponse(response);
+}
+
+export function exportRunUrl(runId: number, format: "csv" | "xlsx" | "json"): string {
+  return `${API_BASE}/runs/${runId}/export?format=${format}`;
+}
