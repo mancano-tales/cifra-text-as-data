@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CodebookEditor } from "./CodebookEditor";
 import { CorpusPage } from "./CorpusPage";
+import { RunsPage } from "./RunsPage";
 
-type Tab = "corpus" | "codebook";
+type Tab = "corpus" | "codebook" | "runs";
 
 function App() {
   const { t, i18n } = useTranslation();
@@ -26,6 +27,10 @@ function App() {
             <button className="seg-btn" disabled={tab === "codebook"} onClick={() => setTab("codebook")}>
               {t("app.nav.codebook")}
             </button>
+            <span className="seg-sep" />
+            <button className="seg-btn" disabled={tab === "runs"} onClick={() => setTab("runs")}>
+              {t("app.nav.runs")}
+            </button>
           </div>
           <div className="seg" aria-label="Language">
             <button
@@ -46,7 +51,11 @@ function App() {
           </div>
         </div>
       </header>
-      <main className="app-main">{tab === "corpus" ? <CorpusPage /> : <CodebookEditor />}</main>
+      <main className="app-main">
+        {tab === "corpus" && <CorpusPage />}
+        {tab === "codebook" && <CodebookEditor />}
+        {tab === "runs" && <RunsPage />}
+      </main>
     </>
   );
 }
