@@ -1,5 +1,16 @@
 # NEWS
 
+## 2026-09-02 (4)
+
+- CI added: `.github/workflows/ci.yml` runs `pytest` (backend) and
+  `oxlint` + `tsc -b`/`vite build` (frontend) on every push and every PR
+  into main. Closes the last item from the original "CI (lint + test on
+  push) — not set up yet" TODO note. Picked after checking in with the
+  two other sessions active on this repo today (`text-as-data-6d` on the
+  Validation screen, `text-as-data-8a` on QualiLab interop) to confirm it
+  was genuinely unclaimed and collision-free — the author asked for that
+  coordination explicitly before starting.
+
 ## 2026-09-02 (3)
 
 - Red-teamed Slice 3 with two independent `agy`-driven adversarial reviews

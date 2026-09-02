@@ -12,8 +12,7 @@
   original single-category/single-coder sketch is still the shape to
   build against.
 - TXT/DOCX/PDF corpus import (Slice 2 covered CSV/XLSX/pasted text only).
-- CI (lint + test on push) — not set up yet; add once the package has a
-  real consumer.
+
 ## Prospective
 
 - DAAF-style **Reproducibility Verification** as its own validation mode
@@ -78,6 +77,18 @@
 
 ## Done
 
+- 2026-09-02 — CI: `.github/workflows/ci.yml`, two jobs on every push and
+  every PR into main — `backend` (Python 3.12, `pip install -e ".[dev]"`,
+  `pytest -q`) and `frontend` (Node 20, `npm ci`, `npm run lint`,
+  `npm run build` — the latter runs `tsc -b` too, so a type error fails CI
+  even though `oxlint` alone wouldn't catch it). Coordinated with the two
+  other active sessions (`text-as-data-6d`, `text-as-data-8a`) before
+  picking this up, to confirm it didn't collide with the Validation screen
+  or QualiLab interop work in flight — this was the one item both agreed
+  was fully unclaimed. Verified both jobs' exact commands pass locally
+  before committing (109 tests green; frontend lint clean aside from 3
+  pre-existing non-blocking `set-state-in-effect` warnings; build
+  succeeds) rather than trusting the YAML would work once pushed.
 - 2026-09-02 — GUIDE-LLM-shaped AI-use disclosure report per run
   (`GET /runs/{id}/disclosure`), adopted after studying the DAAF framework
   (`DAAF-Contribution-Community/daaf`) for lessons applicable to Cifra. New
