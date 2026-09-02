@@ -24,6 +24,20 @@ repo was scaffolded at "light" governance level, same tier as
   the abstraction needs rethinking, not a one-off fix.
 - **`TODO.md`**: append new pending items instead of editing prose in place;
   move finished items to the "Done" section with a date.
+- **`LEARNINGS.md` per non-trivial slice/feature** (convention adopted
+  2026-09-02, inspired by studying the DAAF framework's per-project
+  learnings file): when a slice of real size wraps up — enough that an
+  agent picking up the next slice would benefit from knowing what actually
+  went wrong or surprised along the way, not just what shipped — write a
+  short `LEARNINGS.md`-style entry (in `TODO.md`'s Done section, or its own
+  file under `docs/` for something substantial enough to warrant one) with:
+  what was assumed going in, what turned out to be wrong or harder than
+  expected, and what a future agent should check before repeating the same
+  mistake. This is not a new process — it's what the V7 Bayesian pilot
+  entry and the QualiLab-comparison correction in this file already did —
+  just named as a deliberate practice instead of an ad hoc one, so it
+  doesn't quietly stop happening once it's not the default way this file
+  gets written.
 
 ---
 

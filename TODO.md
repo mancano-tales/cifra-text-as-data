@@ -14,21 +14,22 @@
 - TXT/DOCX/PDF corpus import (Slice 2 covered CSV/XLSX/pasted text only).
 - CI (lint + test on push) — not set up yet; add once the package has a
   real consumer.
-- No schema migration tooling — `SQLModel.metadata.create_all()` only
-  creates missing tables, never alters an existing one. This has now bitten
-  the shared local `codifica.sqlite` twice (`documents.created_at` in
-  Slice 2, `extractions.prompt_sent`/`raw_response` on 2026-09-02, the
-  second one discovered because it 500'd `GET /runs` for a live session)
-  — both fixed by hand with an additive `ALTER TABLE ... ADD COLUMN`
-  against the live file, not by regenerating it (see NEWS.md 2026-09-02
-  (3) for the exact fix). Worth either a lightweight startup check
-  (compare `PRAGMA table_info` against the SQLModel schema, auto-add
-  missing nullable/defaulted columns) or adopting Alembic once the schema
-  churns less — before every future column addition means hunting down
-  and manually patching whichever `codifica.sqlite` files happen to be
-  live at the time.
-
 ## Prospective
+
+- DAAF-style **Reproducibility Verification** as its own validation mode
+  (2026-09-02, from studying `DAAF-Contribution-Community/daaf`): beyond
+  comparing a run's output to human gold labels (kappa/precision/recall),
+  verify the *pipeline itself* is reproducible — same codebook + same
+  model + same corpus should (within whatever tolerance non-deterministic
+  LLM output allows) produce the same categoria. There's already a real
+  data point for this: the V7 pilot's same-prompt repeat run found only
+  21/32 (66%) exact agreement (see
+  `docs/research/2026-09-02_llm_pipeline_verification_methodology.md`).
+  DAAF has a dedicated engagement mode for exactly this — point it at a
+  finished analysis and it reruns everything, reporting discrepancies.
+  Bigger than the disclosure/provenance work above (needs its own design:
+  what tolerance counts as "reproduced," N repeats, cost), not attempted
+  in this pass — logged here instead of silently dropped.
 
 - Open items from the LLM-pipeline verification methodology (see
   `docs/research/2026-09-02_llm_pipeline_verification_methodology.md`,
@@ -77,6 +78,37 @@
 
 ## Done
 
+- 2026-09-02 — GUIDE-LLM-shaped AI-use disclosure report per run
+  (`GET /runs/{id}/disclosure`), adopted after studying the DAAF framework
+  (`DAAF-Contribution-Community/daaf`) for lessons applicable to Cifra. New
+  `disclosure.py` maps the real GUIDE-LLM checklist (13 items across
+  sections A-G, fetched from the actual checklist page rather than
+  guessed — llm-checklist.com/checklist) onto what Cifra already records
+  per run: model/provider/access-mode (`RunRecord` gained `provider_mode`/
+  `provider_detail`, persisted at creation instead of only living
+  transiently on `CreateRunRequest`), the exact prompt sent per document
+  (already-existing `prompt_sent`), whether output is validated against
+  human gold labels (honestly reports "not yet" — no `human_labels` table
+  exists yet), and reproducibility pointers (codebook id, run id, git
+  commit). Doubles as the "citation propagation" idea from the same
+  research: rather than a separate references subsystem, provenance and
+  disclosure are the same report. Explicitly out of scope from that same
+  research pass: DAAF's Reproducibility Verification mode (see Prospective
+  below) and the rest of DAAF's much larger surface (9 engagement modes,
+  benchmarking, etc.) — this took the 1-2 cheap, high-value ideas, not the
+  whole framework. Also formalized the ad hoc "write down what surprised
+  us" pattern this file was already doing as a named convention
+  (`AGENTS.md` § `LEARNINGS.md`).
+  Fell out of this work: closed the recurring schema-drift TODO below by
+  building it instead of writing it up again — `db.py`'s `get_engine()`
+  now runs an additive `_ensure_columns()` migration on every startup
+  (diffs `PRAGMA table_info` against the SQLModel schema, `ALTER TABLE
+  ADD COLUMN` for anything missing, defaulted and additive-only — never
+  drops or renames), so a column added to a model doesn't require anyone
+  to remember to patch whichever `codifica.sqlite` happens to be live.
+  6 new tests (2 migration, 4 disclosure) plus coverage on the new
+  endpoint; 99/99 passing (pilot_v7's CLI-dependent tests excluded from
+  this count, unaffected by this change).
 - 2026-09-02 — Full prompt/response audit trail, prompted by the author
   asking how to verify a shown prompt wasn't invented after the fact and
   whether the pipeline is reproducible. `providers.py` gained

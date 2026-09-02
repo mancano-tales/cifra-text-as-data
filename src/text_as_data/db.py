@@ -34,6 +34,13 @@ class RunRecord(SQLModel, table=True):
     corpus_id: str
     model: str
     status: str = "pending"
+    # What actually produced this run's extractions, persisted at creation
+    # time rather than left implicit in CreateRunRequest (which is not
+    # itself stored) -- disclosure.py needs to report this honestly after
+    # the fact, and "trust today's app.py code path" is not a substitute
+    # for a run recording its own provenance.
+    provider_mode: str = "api_key"  # "api_key" | "cli"
+    provider_detail: str = ""  # the model id (api_key mode) or CLI command (cli mode)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -54,6 +61,65 @@ class ExtractionRecord(SQLModel, table=True):
     # happened before any prompt could be built.
     prompt_sent: str = ""
     raw_response: str = ""
+
+
+# SQLModel/SQLAlchemy field type -> SQLite column type, for the additive
+# migration below. Only a hint, not a constraint: SQLite has dynamic type
+# affinity, so a column declared TEXT still stores an int fine and vice
+# versa -- correctness doesn't depend on guessing right here. Anything not
+# in this dict, or any SQLAlchemy type whose `.python_type` isn't
+# implemented (raises NotImplementedError -- true for a few concrete types,
+# not just a hypothetical), falls back to TEXT rather than failing the
+# whole migration over a cosmetic type-affinity choice.
+_SQLITE_TYPE_BY_PYTHON_TYPE = {
+    str: "TEXT",
+    int: "INTEGER",
+    float: "REAL",
+    bool: "INTEGER",
+}
+
+
+def _sqlite_column_type(column) -> str:
+    try:
+        return _SQLITE_TYPE_BY_PYTHON_TYPE.get(column.type.python_type, "TEXT")
+    except NotImplementedError:
+        return "TEXT"
+
+
+def _ensure_columns(dbapi_connection) -> None:
+    """Additively migrate a pre-existing SQLite file to match the current
+    model definitions: for every SQLModel table, ADD COLUMN any field the
+    model declares that the on-disk table doesn't have yet.
+
+    `SQLModel.metadata.create_all()` only creates whole tables that don't
+    exist -- it never alters an existing table's columns. Twice now
+    (prompt_sent/raw_response on ExtractionRecord, provider_mode/
+    provider_detail on RunRecord above) a field added to a model has left
+    a live shared `codifica.sqlite` on disk with the old, narrower shape,
+    and every query touching that table 500s until someone runs an
+    `ALTER TABLE` by hand. This closes that gap generally instead of
+    perpetuating it one manual fix at a time: new tables still come from
+    `create_all` below, but any column drift on an existing table is
+    reconciled automatically, every time the engine is built. Additive
+    only (never drops or renames a column), so no data is at risk -- a
+    stale extra column left over from an old model shape is simply
+    ignored, not removed.
+    """
+    for table in SQLModel.metadata.tables.values():
+        existing = {
+            row[1]  # PRAGMA table_info(...) row shape: (cid, name, type, notnull, dflt_value, pk)
+            for row in dbapi_connection.execute(f'PRAGMA table_info("{table.name}")').fetchall()
+        }
+        if not existing:
+            continue  # table doesn't exist yet -- create_all() below handles it, nothing to migrate
+        for column in table.columns:
+            if column.name in existing:
+                continue
+            sqlite_type = _sqlite_column_type(column)
+            default_sql = ""
+            if column.default is not None and column.default.is_scalar:
+                default_sql = f" DEFAULT {column.default.arg!r}" if isinstance(column.default.arg, str) else f" DEFAULT {column.default.arg}"
+            dbapi_connection.execute(f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {sqlite_type}{default_sql}')
 
 
 def get_engine(db_url: str = "sqlite:///codifica.sqlite"):
@@ -79,4 +145,7 @@ def get_engine(db_url: str = "sqlite:///codifica.sqlite"):
             dbapi_connection.execute("PRAGMA journal_mode=WAL")
 
     SQLModel.metadata.create_all(engine)
+    with engine.connect() as connection:
+        _ensure_columns(connection.connection)
+        connection.connection.commit()
     return engine

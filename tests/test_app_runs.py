@@ -145,3 +145,33 @@ def test_export_run_results_404_for_unknown_run():
     response = client.get("/runs/999/export?format=csv")
 
     assert response.status_code == 404
+
+
+def test_run_persists_provider_mode_and_detail_for_disclosure():
+    client, codebook_id, run_id = _make_test_client()
+
+    response = client.get(f"/runs/{run_id}/disclosure")
+
+    assert response.status_code == 200
+    body = response.json()
+    b1 = body["B_model_and_access_details"]["B1_model_name_provider_version_date"]
+    assert b1["provider_mode"] == "api_key"  # _make_test_client's default CreateRunRequest
+    assert b1["model"] == "fake-model"
+
+
+def test_get_run_disclosure_404_for_unknown_run():
+    client, codebook_id, run_id = _make_test_client()
+
+    response = client.get("/runs/999/disclosure")
+
+    assert response.status_code == 404
+
+
+def test_get_run_disclosure_reports_prompt_audit_trail_coverage():
+    client, codebook_id, run_id = _make_test_client()
+
+    response = client.get(f"/runs/{run_id}/disclosure")
+
+    assert response.status_code == 200
+    c1 = response.json()["C_prompting"]["C1_exact_prompts"]
+    assert "1 of 1 documents" in c1

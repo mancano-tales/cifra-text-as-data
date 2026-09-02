@@ -11,6 +11,7 @@ from sqlmodel import Session, select
 from .codebook import spec_from_yaml_string, spec_to_yaml_string
 from .corpus_import import parse_csv_rows, parse_xlsx_rows
 from .db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord, get_engine
+from .disclosure import build_disclosure
 from .export import results_to_csv_bytes, results_to_json_bytes, results_to_xlsx_bytes
 from .extraction import run_extraction
 from .providers import CliProvider, Provider, make_api_key_provider
@@ -115,7 +116,16 @@ def create_run(
         if codebook is None:
             raise HTTPException(status_code=404, detail=f"codebook {request.codebook_id} not found")
 
-        run = RunRecord(codebook_id=request.codebook_id, corpus_id=request.corpus_id, model=request.model)
+        provider_detail = (
+            " ".join(request.cli_command) if request.provider_mode == "cli" and request.cli_command else request.model
+        )
+        run = RunRecord(
+            codebook_id=request.codebook_id,
+            corpus_id=request.corpus_id,
+            model=request.model,
+            provider_mode=request.provider_mode,
+            provider_detail=provider_detail,
+        )
         session.add(run)
         session.commit()
         session.refresh(run)
@@ -225,6 +235,19 @@ def export_run_results(
         media_type=_EXPORT_CONTENT_TYPES[format],
         headers={"Content-Disposition": f'attachment; filename="run_{run_id}_results.{format}"'},
     )
+
+
+@app.get("/runs/{run_id}/disclosure")
+def get_run_disclosure(run_id: int, engine=Depends(get_engine_dependency)):
+    """GUIDE-LLM-shaped AI-use disclosure report for one run -- see
+    disclosure.py's docstring for what this covers and why. Read-only,
+    derived entirely from what's already persisted (RunRecord,
+    ExtractionRecord, the codebook); nothing new to fill in by hand."""
+    with Session(engine) as session:
+        run = session.get(RunRecord, run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"run {run_id} not found")
+        return build_disclosure(session, run)
 
 
 class PasteCorpusRequest(BaseModel):
