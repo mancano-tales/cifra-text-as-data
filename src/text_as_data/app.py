@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlmodel import Session, select
@@ -11,8 +11,20 @@ from sqlmodel import Session, select
 from .codebook import spec_from_yaml_string, spec_to_yaml_string
 from .corpus_import import parse_csv_rows, parse_xlsx_rows
 from .db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord, get_engine
+from .export import results_to_csv_bytes, results_to_json_bytes, results_to_xlsx_bytes
 from .extraction import run_extraction
 from .providers import CliProvider, Provider, make_api_key_provider
+
+_EXPORT_CONTENT_TYPES = {
+    "csv": "text/csv",
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "json": "application/json",
+}
+_EXPORT_BUILDERS = {
+    "csv": results_to_csv_bytes,
+    "xlsx": results_to_xlsx_bytes,
+    "json": results_to_json_bytes,
+}
 
 app = FastAPI(title="Cifra backend (Slice 1)")
 
@@ -58,6 +70,33 @@ def get_provider_dependency(request: CreateRunRequest) -> Provider:
     return make_api_key_provider(vendor="anthropic", model=request.model)
 
 
+@app.get("/runs")
+def list_runs(engine=Depends(get_engine_dependency)):
+    with Session(engine) as session:
+        runs = session.exec(select(RunRecord).order_by(RunRecord.created_at.desc())).all()
+        results = []
+        for run in runs:
+            codebook = session.get(CodebookRecord, run.codebook_id)
+            total = len(
+                session.exec(select(DocumentRecord).where(DocumentRecord.corpus_id == run.corpus_id)).all()
+            )
+            processed = len(session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run.id)).all())
+            results.append(
+                {
+                    "id": run.id,
+                    "corpus_id": run.corpus_id,
+                    "codebook_id": run.codebook_id,
+                    "codebook_name": codebook.name if codebook else None,
+                    "model": run.model,
+                    "status": run.status,
+                    "processed": processed,
+                    "total": total,
+                    "created_at": run.created_at,
+                }
+            )
+        return results
+
+
 @app.post("/runs")
 def create_run(
     request: CreateRunRequest,
@@ -92,6 +131,12 @@ def get_run(run_id: int, engine=Depends(get_engine_dependency)):
         return {"id": run.id, "status": run.status, "processed": processed, "total": total}
 
 
+def _extraction_with_snippet(session: Session, extraction: ExtractionRecord) -> dict:
+    document = session.get(DocumentRecord, extraction.document_id)
+    snippet = document.text[:160] if document else ""
+    return {**extraction.model_dump(), "document_snippet": snippet}
+
+
 @app.get("/runs/{run_id}/results")
 def get_run_results(run_id: int, engine=Depends(get_engine_dependency)):
     with Session(engine) as session:
@@ -100,7 +145,64 @@ def get_run_results(run_id: int, engine=Depends(get_engine_dependency)):
             raise HTTPException(status_code=404, detail=f"run {run_id} not found")
 
         rows = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
-        return [row.model_dump() for row in rows]
+        return [_extraction_with_snippet(session, row) for row in rows]
+
+
+class UpdateExtractionRequest(BaseModel):
+    categoria: str
+    justificativa: str
+
+
+@app.put("/runs/{run_id}/results/{extraction_id}")
+def update_extraction(
+    run_id: int, extraction_id: int, request: UpdateExtractionRequest, engine=Depends(get_engine_dependency)
+):
+    with Session(engine) as session:
+        run = session.get(RunRecord, run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"run {run_id} not found")
+
+        extraction = session.get(ExtractionRecord, extraction_id)
+        if extraction is None or extraction.run_id != run_id:
+            raise HTTPException(status_code=404, detail=f"extraction {extraction_id} not found in run {run_id}")
+
+        codebook = session.get(CodebookRecord, run.codebook_id)
+        valid_labels = {c["label"] for c in spec_from_yaml_string(codebook.yaml_raw)["categories"]}
+        if request.categoria not in valid_labels:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"categoria {request.categoria!r} is not a valid label for this codebook; "
+                    f"expected one of {sorted(valid_labels)}"
+                ),
+            )
+
+        extraction.categoria = request.categoria
+        extraction.justificativa = request.justificativa
+        session.add(extraction)
+        session.commit()
+        session.refresh(extraction)
+        return _extraction_with_snippet(session, extraction)
+
+
+@app.get("/runs/{run_id}/export")
+def export_run_results(
+    run_id: int, format: Literal["csv", "xlsx", "json"] = "csv", engine=Depends(get_engine_dependency)
+):
+    with Session(engine) as session:
+        run = session.get(RunRecord, run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"run {run_id} not found")
+
+        rows = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
+        result_rows = [_extraction_with_snippet(session, row) for row in rows]
+
+    content = _EXPORT_BUILDERS[format](result_rows)
+    return Response(
+        content=content,
+        media_type=_EXPORT_CONTENT_TYPES[format],
+        headers={"Content-Disposition": f'attachment; filename="run_{run_id}_results.{format}"'},
+    )
 
 
 class PasteCorpusRequest(BaseModel):
