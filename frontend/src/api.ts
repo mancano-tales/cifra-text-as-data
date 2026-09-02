@@ -215,3 +215,41 @@ export async function updateExtraction(
 export function exportRunUrl(runId: number, format: "csv" | "xlsx" | "json"): string {
   return `${API_BASE}/runs/${runId}/export?format=${format}`;
 }
+
+export interface GoldLabelUploadResult {
+  imported: number;
+  skipped_blank: number;
+}
+
+export async function uploadGoldLabels(runId: number, file: File): Promise<GoldLabelUploadResult> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(`${API_BASE}/runs/${runId}/gold-labels`, { method: "POST", body: formData });
+  return handleResponse(response);
+}
+
+export interface CategoryMetrics {
+  accuracy: number;
+  kappa: number | null;
+  precision: Record<string, number>;
+  recall: Record<string, number>;
+  f1: Record<string, number>;
+}
+
+export interface Disagreement {
+  document_id: number;
+  document_snippet: string;
+  predicted: string;
+  gold: string;
+}
+
+export interface ValidationReport {
+  coverage: { labeled: number; total: number; excluded_multi_coder: number };
+  per_category: CategoryMetrics | Record<string, never>;
+  disagreements: Disagreement[];
+}
+
+export async function getRunValidation(runId: number): Promise<ValidationReport> {
+  const response = await fetch(`${API_BASE}/runs/${runId}/validation`);
+  return handleResponse(response);
+}
