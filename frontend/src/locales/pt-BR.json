@@ -70,6 +70,9 @@
     "colJustification": "Justificativa",
     "edit": "Editar",
     "save": "Salvar",
+    "cancel": "Cancelar",
+    "modelRequired": "O modelo não pode ficar vazio.",
+    "cliCommandRequired": "O comando de CLI não pode ficar vazio.",
     "unknownCategory": "{{value}} (não é um rótulo atual do codebook)",
     "noResults": "Nenhum resultado corresponde a este filtro."
   },

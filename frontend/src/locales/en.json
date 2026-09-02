@@ -70,6 +70,9 @@
     "colJustification": "Justification",
     "edit": "Edit",
     "save": "Save",
+    "cancel": "Cancel",
+    "modelRequired": "Model cannot be empty.",
+    "cliCommandRequired": "CLI command cannot be empty.",
     "unknownCategory": "{{value}} (not a current codebook label)",
     "noResults": "No results match this filter."
   },

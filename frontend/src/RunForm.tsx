@@ -4,6 +4,23 @@ import { useTranslation } from "react-i18next";
 import { createRun } from "./api";
 import type { CodebookSummary, CorpusSummary } from "./api";
 
+function parseCliCommand(raw: string): string[] {
+  // A naive `.split(" ")` breaks any command containing a double-quoted
+  // argument or a quoted path with spaces (e.g. `"C:\Program
+  // Files\nodejs\claude.cmd" -p` or `agy -p --prompt "foo bar"`), handing
+  // the backend a mangled argv that subprocess.run can't exec. This
+  // recognizes double-quoted segments as single tokens (quotes stripped)
+  // and splits everything else on whitespace -- not a full shell parser
+  // (no escaped quotes, no single quotes), but covers the common case.
+  const tokens: string[] = [];
+  const pattern = /"([^"]*)"|(\S+)/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(raw)) !== null) {
+    tokens.push(match[1] !== undefined ? match[1] : match[2]);
+  }
+  return tokens;
+}
+
 interface RunFormProps {
   corpora: CorpusSummary[];
   codebooks: CodebookSummary[];
@@ -26,12 +43,12 @@ export function RunForm({ corpora, codebooks, onCreated, onError }: RunFormProps
     if (submitting) return;
     const trimmedModel = model.trim();
     if (!trimmedModel) {
-      onError(new Error("Model cannot be empty."));
+      onError(new Error(t("runs.modelRequired")));
       return;
     }
-    const commandParts = cliCommand.split(" ").filter(Boolean);
+    const commandParts = parseCliCommand(cliCommand);
     if (providerMode === "cli" && commandParts.length === 0) {
-      onError(new Error("CLI command cannot be empty."));
+      onError(new Error(t("runs.cliCommandRequired")));
       return;
     }
     setSubmitting(true);
@@ -55,8 +72,10 @@ export function RunForm({ corpora, codebooks, onCreated, onError }: RunFormProps
     <form onSubmit={handleSubmit}>
       <h3 className="card-title">{t("runs.newRun")}</h3>
       <div className="field">
-        <label className="field-label">{t("runs.corpus")}</label>
-        <select value={corpusId} onChange={(e) => setCorpusId(e.target.value)} required>
+        <label className="field-label" htmlFor="run-corpus">
+          {t("runs.corpus")}
+        </label>
+        <select id="run-corpus" value={corpusId} onChange={(e) => setCorpusId(e.target.value)} required>
           <option value="" disabled>
             {t("runs.selectCorpus")}
           </option>
@@ -68,8 +87,10 @@ export function RunForm({ corpora, codebooks, onCreated, onError }: RunFormProps
         </select>
       </div>
       <div className="field">
-        <label className="field-label">{t("runs.codebook")}</label>
-        <select value={codebookId} onChange={(e) => setCodebookId(e.target.value)} required>
+        <label className="field-label" htmlFor="run-codebook">
+          {t("runs.codebook")}
+        </label>
+        <select id="run-codebook" value={codebookId} onChange={(e) => setCodebookId(e.target.value)} required>
           <option value="" disabled>
             {t("runs.selectCodebook")}
           </option>
@@ -81,12 +102,20 @@ export function RunForm({ corpora, codebooks, onCreated, onError }: RunFormProps
         </select>
       </div>
       <div className="field">
-        <label className="field-label">{t("runs.model")}</label>
-        <input value={model} onChange={(e) => setModel(e.target.value)} required />
+        <label className="field-label" htmlFor="run-model">
+          {t("runs.model")}
+        </label>
+        <input id="run-model" value={model} onChange={(e) => setModel(e.target.value)} required />
       </div>
       <div className="field">
-        <label className="field-label">{t("runs.providerMode")}</label>
-        <select value={providerMode} onChange={(e) => setProviderMode(e.target.value as "api_key" | "cli")}>
+        <label className="field-label" htmlFor="run-provider-mode">
+          {t("runs.providerMode")}
+        </label>
+        <select
+          id="run-provider-mode"
+          value={providerMode}
+          onChange={(e) => setProviderMode(e.target.value as "api_key" | "cli")}
+        >
           <option value="api_key">{t("runs.providerApiKey")}</option>
           <option value="cli">{t("runs.providerCli")}</option>
         </select>
@@ -94,12 +123,20 @@ export function RunForm({ corpora, codebooks, onCreated, onError }: RunFormProps
       {providerMode === "cli" && (
         <>
           <div className="field">
-            <label className="field-label">{t("runs.cliCommand")}</label>
-            <input value={cliCommand} onChange={(e) => setCliCommand(e.target.value)} required />
+            <label className="field-label" htmlFor="run-cli-command">
+              {t("runs.cliCommand")}
+            </label>
+            <input id="run-cli-command" value={cliCommand} onChange={(e) => setCliCommand(e.target.value)} required />
           </div>
           <div className="field">
-            <label className="field-label">{t("runs.cliPromptMode")}</label>
-            <select value={cliPromptMode} onChange={(e) => setCliPromptMode(e.target.value as "stdin" | "arg")}>
+            <label className="field-label" htmlFor="run-cli-prompt-mode">
+              {t("runs.cliPromptMode")}
+            </label>
+            <select
+              id="run-cli-prompt-mode"
+              value={cliPromptMode}
+              onChange={(e) => setCliPromptMode(e.target.value as "stdin" | "arg")}
+            >
               <option value="stdin">stdin</option>
               <option value="arg">arg</option>
             </select>

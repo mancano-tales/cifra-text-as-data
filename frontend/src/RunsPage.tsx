@@ -117,6 +117,7 @@ export function RunsPage() {
     selectionTokenRef.current += 1;
     const token = selectionTokenRef.current;
     setSelectedRunId(run.id);
+    setSelectedStatus(null);
     setResults(null);
     setCodebookLabels([]);
     loadRunDetail(run.id, run.codebook_id, token);
@@ -216,7 +217,7 @@ export function RunsPage() {
               runId={selectedRunId}
               results={results}
               codebookLabels={codebookLabels}
-              onResultsChange={setResults}
+              onResultsChange={(updater) => setResults((prev) => (prev ? updater(prev) : prev))}
               onError={setError}
             />
           )}

@@ -24,6 +24,7 @@ export function CodebookEditor() {
   const [spec, setSpec] = useState<CodebookSpec>(emptySpec());
   const [yamlPreview, setYamlPreview] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [submitting, setSubmitting] = useState(false);
   const shownError = error ? describeApiError(error, t) : null;
 
   // If the user clicks a different codebook in the list while a previous
@@ -119,16 +120,43 @@ export function CodebookEditor() {
 
   async function handleSave(event: FormEvent) {
     event.preventDefault();
+    if (submitting) return;
     setError(null);
+    // Captured (not bumped) at the start of the save -- if the user
+    // navigates to a different codebook (or starts a new one) while this
+    // save's requests are still in flight, loadCodebook()/startNew() bump
+    // the token, and the result below is discarded instead of clobbering
+    // whatever the user has since navigated to with this save's response.
+    const token = selectionTokenRef.current;
+    setSubmitting(true);
     try {
       const cleanedSpec = stripBlankExamples(spec);
       const result = editingId ? await updateCodebook(editingId, cleanedSpec) : await createCodebook(cleanedSpec);
       const detail = await getCodebook(result.id);
-      setEditingId(detail.id);
-      setYamlPreview(detail.yaml_raw);
+      if (token === selectionTokenRef.current) {
+        setEditingId(detail.id);
+        // Reflect the server's own (cleaned) spec back into the form --
+        // without this, the textareas keep showing pre-strip blank lines
+        // while the YAML preview shows the stripped version, and editing
+        // further from here reintroduces the very thing just cleaned.
+        setSpec({
+          concept: detail.spec.concept,
+          description: detail.spec.description,
+          categories: detail.spec.categories.map((c) => ({
+            label: c.label,
+            definition: c.definition,
+            positive_examples: c.positive_examples ?? [],
+            negative_examples: c.negative_examples ?? [],
+            boundary_notes: c.boundary_notes ?? "",
+          })),
+        });
+        setYamlPreview(detail.yaml_raw);
+      }
       await refreshList();
     } catch (err) {
-      setError(err);
+      if (token === selectionTokenRef.current) setError(err);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -261,7 +289,7 @@ export function CodebookEditor() {
             <button type="button" className="btn" onClick={addCategory}>
               {t("codebook.addCategory")}
             </button>
-            <button type="submit" className="btn btn-primary">
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
               {editingId ? t("codebook.saveChanges") : t("codebook.createCodebook")}
             </button>
           </div>

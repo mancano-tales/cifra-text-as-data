@@ -7,7 +7,13 @@ interface ResultsTableProps {
   runId: number;
   results: ExtractionResult[];
   codebookLabels: string[];
-  onResultsChange: (results: ExtractionResult[]) => void;
+  // Takes an updater function (not a computed array) so saveEdit doesn't
+  // have to close over `results` -- two rows saved in close succession
+  // (Row 2's save starting before Row 1's PUT resolves) would otherwise
+  // both compute their update from the same stale `results` snapshot, and
+  // whichever save's setState landed second would silently revert the
+  // other's edit. React's setState already accepts this form directly.
+  onResultsChange: (updater: (prev: ExtractionResult[]) => ExtractionResult[]) => void;
   onError: (err: unknown) => void;
 }
 
@@ -17,6 +23,7 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editCategoria, setEditCategoria] = useState("");
   const [editJustificativa, setEditJustificativa] = useState("");
+  const [savingId, setSavingId] = useState<number | null>(null);
 
   function startEdit(row: ExtractionResult) {
     setEditingId(row.id);
@@ -24,10 +31,16 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
     setEditJustificativa(row.justificativa);
   }
 
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
   async function saveEdit(row: ExtractionResult) {
+    if (savingId === row.id) return;
+    setSavingId(row.id);
     try {
       const updated = await updateExtraction(runId, row.id, editCategoria, editJustificativa);
-      onResultsChange(results.map((r) => (r.id === row.id ? updated : r)));
+      onResultsChange((prev) => prev.map((r) => (r.id === row.id ? updated : r)));
       // Only clear the edit UI if the user is still editing this same row --
       // if they've since clicked "Edit" on a different row while this save
       // was in flight, clearing unconditionally would wipe that row's
@@ -35,19 +48,29 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
       setEditingId((current) => (current === row.id ? null : current));
     } catch (err) {
       onError(err);
+    } finally {
+      setSavingId((current) => (current === row.id ? null : current));
     }
   }
 
   const filteredResults = categoryFilter ? results.filter((r) => r.categoria === categoryFilter) : results;
+  // The filter must also list categories that actually occur in the
+  // results but aren't in the current codebook -- the "__error__"
+  // sentinel from a failed extraction, or a label since removed from the
+  // codebook -- otherwise there's no way to filter down to exactly the
+  // rows that need review.
+  const filterOptions = Array.from(new Set([...codebookLabels, ...results.map((r) => r.categoria)]));
 
   return (
     <div>
       <h3 className="card-title">{t("runs.resultsTitle")}</h3>
       <div className="field">
-        <label className="field-label">{t("runs.filterByCategory")}</label>
-        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+        <label className="field-label" htmlFor="results-category-filter">
+          {t("runs.filterByCategory")}
+        </label>
+        <select id="results-category-filter" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
           <option value="">{t("runs.allCategories")}</option>
-          {codebookLabels.map((label) => (
+          {filterOptions.map((label) => (
             <option key={label} value={label}>
               {label}
             </option>
@@ -55,13 +78,13 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
         </select>
       </div>
       <div className="actions-row">
-        <a className="btn" href={exportRunUrl(runId, "csv")}>
+        <a className="btn" href={exportRunUrl(runId, "csv")} target="_blank" rel="noopener noreferrer">
           {t("runs.exportCsv")}
         </a>
-        <a className="btn" href={exportRunUrl(runId, "xlsx")}>
+        <a className="btn" href={exportRunUrl(runId, "xlsx")} target="_blank" rel="noopener noreferrer">
           {t("runs.exportXlsx")}
         </a>
-        <a className="btn" href={exportRunUrl(runId, "json")}>
+        <a className="btn" href={exportRunUrl(runId, "json")} target="_blank" rel="noopener noreferrer">
           {t("runs.exportJson")}
         </a>
       </div>
@@ -117,9 +140,14 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
                 </td>
                 <td>
                   {editingId === row.id ? (
-                    <button type="button" className="btn" onClick={() => saveEdit(row)}>
-                      {t("runs.save")}
-                    </button>
+                    <>
+                      <button type="button" className="btn" onClick={() => saveEdit(row)} disabled={savingId === row.id}>
+                        {t("runs.save")}
+                      </button>
+                      <button type="button" className="btn-ghost" onClick={cancelEdit}>
+                        {t("runs.cancel")}
+                      </button>
+                    </>
                   ) : (
                     <button type="button" className="btn-danger-text" onClick={() => startEdit(row)}>
                       {t("runs.edit")}
