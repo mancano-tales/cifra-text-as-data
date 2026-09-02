@@ -1,5 +1,33 @@
 # NEWS
 
+## 2026-09-02
+
+- Slice 3 shipped: a "Runs" tab joins Corpus and Codebook — create a run
+  (API-key or CLI provider mode, including a CLI prompt-delivery choice
+  for CLIs like `agy` that take the prompt as an argument rather than
+  stdin), watch it progress live via 2-second polling, then browse its
+  results in a table with a category filter, inline
+  categoria/justificativa editing (validated against the run's own
+  codebook labels — an edit to a category the codebook doesn't define is
+  rejected), and CSV/XLSX/JSON export. New backend: `GET /runs` (list),
+  `PUT /runs/{id}/results/{id}` (edit), `GET /runs/{id}/export`, and
+  `GET /runs/{id}/results` now joins in a `document_snippet` so a result
+  row is legible without a separate corpus lookup. Verified end to end in
+  a real browser: created a live run against `claude -p`, watched it
+  transition from progress bar to results table with no manual reload,
+  edited a row and confirmed it persisted after navigating away and back,
+  downloaded and parsed all three export formats. Also fixed a real CORS
+  bug hit during that verification — the backend only ever allowed
+  `http://localhost:5173`, which breaks the moment two dev frontends run
+  on different ports (exactly what happened, with two Claude Code
+  sessions working this repo concurrently); now allows any
+  localhost/127.0.0.1 port via `allow_origin_regex`, appropriate since
+  this backend has no production deployment to restrict against. Screen 5
+  (Validation) is the only screen from `AGENTS.md`'s original MVP list
+  left unbuilt. Design:
+  `docs/superpowers/specs/2026-09-01-slice-3-runs-results-screen-design.md`;
+  plan: `docs/superpowers/plans/2026-09-01-slice-3-runs-results-screen.md`.
+
 ## 2026-09-01 (3)
 
 - `POST /runs` can now actually select CLI mode, not just API-key mode.
