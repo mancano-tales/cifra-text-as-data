@@ -68,6 +68,15 @@ def get_engine(db_url: str = "sqlite:///codifica.sqlite"):
     @event.listens_for(engine, "connect")
     def _enable_foreign_keys(dbapi_connection, _connection_record):
         dbapi_connection.execute("PRAGMA foreign_keys=ON")
+        if not is_in_memory:
+            # WAL lets readers and a writer proceed concurrently instead of
+            # the default rollback-journal mode's whole-file lock -- with
+            # multiple processes (this project's own dev sessions today)
+            # sharing one codifica.sqlite, that default mode means a
+            # background run_extraction write can make an unrelated read
+            # fail with "database is locked". WAL needs a real file, so
+            # this is skipped for in-memory test databases.
+            dbapi_connection.execute("PRAGMA journal_mode=WAL")
 
     SQLModel.metadata.create_all(engine)
     return engine
