@@ -112,6 +112,23 @@ categories:
         Codebook.from_yaml_string(integer_label_yaml)
 
 
+def test_from_yaml_string_rejects_a_category_that_is_not_a_mapping():
+    # `categories: ["protest", "not_protest"]` (bare strings, not YAML
+    # mappings) is truthy at the top level, so it passes the
+    # `spec.get("categories")` check -- without a per-item type check,
+    # `category.get("label")` then raises a raw AttributeError.
+    bare_string_categories_yaml = """
+concept: protest
+description: A collective, public event.
+categories:
+  - protest
+  - not_protest
+"""
+
+    with pytest.raises(ValueError, match="must be a YAML mapping"):
+        Codebook.from_yaml_string(bare_string_categories_yaml)
+
+
 VALID_SPEC = {
     "concept": "protest",
     "description": "A collective, public event.",

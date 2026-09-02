@@ -21,7 +21,29 @@ def agreement_report(
     per category label, and the list of mismatched rows for manual
     inspection.
     """
+    if gold[id_col].duplicated().any():
+        # agreement_report assumes exactly one gold row per document -- a
+        # multi-coder gold set (more than one human label per document,
+        # which db.py's HumanLabelRecord deliberately allows for
+        # inter-rater work) would otherwise silently fan out the merge
+        # below, duplicating each predicted row once per extra coder and
+        # inflating the effective sample size. The default QualiLab import
+        # path ("final" layer) already enforces this precondition before
+        # writing HumanLabelRecord rows, but agreement_report shouldn't
+        # rely on every caller remembering that.
+        dupes = sorted(gold.loc[gold[id_col].duplicated(), id_col].unique().tolist())
+        raise ValueError(
+            f"gold has more than one row for the same {id_col!r} (e.g. {dupes[:5]}) -- "
+            "agreement_report expects exactly one gold label per document; pre-aggregate "
+            "multi-coder gold sets to a single consolidated row per document first"
+        )
+
     merged = predicted.merge(gold, on=id_col, suffixes=("_pred", "_gold"))
+    if len(merged) == 0:
+        raise ValueError(
+            f"no overlapping {id_col!r} values between predicted and gold -- "
+            f"predicted has {len(predicted)} rows, gold has {len(gold)} rows, but none share an id"
+        )
     if columns is None:
         columns = [c for c in gold.columns if c != id_col]
 

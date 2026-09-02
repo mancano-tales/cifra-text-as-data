@@ -253,6 +253,53 @@ def test_run_extraction_copies_prompt_and_raw_response_from_cached_extraction():
         assert extraction.raw_response == "fake raw response"
 
 
+def test_run_extraction_does_not_reuse_cache_after_codebook_is_edited_in_place():
+    # PUT /codebooks/{id} edits a CodebookRecord's yaml_raw in place, same
+    # id -- a cache match keyed only on codebook_id would otherwise reuse
+    # an extraction produced under the codebook's *previous* definition,
+    # silently ignoring the edit the researcher just made.
+    engine = get_engine("sqlite://")
+    run_id, corpus_id = _seed(engine, n_documents=1)
+    provider = CountingFakeProvider()
+    run_extraction(engine, run_id, provider)
+    assert provider.calls == 1
+
+    with Session(engine) as session:
+        run = session.exec(select(RunRecord).where(RunRecord.id == run_id)).one()
+        codebook_id = run.codebook_id
+        codebook = session.get(CodebookRecord, codebook_id)
+        # Edit the codebook's definition in place -- same id, new content.
+        codebook.yaml_raw = codebook.yaml_raw.replace("Positive case.", "Positive case (edited).")
+        session.add(codebook)
+        session.commit()
+
+        second_run = RunRecord(codebook_id=codebook_id, corpus_id=corpus_id, model="fake-model")
+        session.add(second_run)
+        session.commit()
+        session.refresh(second_run)
+        second_run_id = second_run.id
+
+    run_extraction(engine, second_run_id, provider)
+
+    # The edited codebook must trigger a fresh provider call, not reuse the
+    # extraction cached under the pre-edit definition.
+    assert provider.calls == 2
+    with Session(engine) as session:
+        extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == second_run_id)).all()
+        assert len(extractions) == 1
+
+
+def test_run_extraction_records_the_codebook_yaml_hash_on_the_run():
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=1)
+
+    run_extraction(engine, run_id, CountingFakeProvider())
+
+    with Session(engine) as session:
+        run = session.get(RunRecord, run_id)
+        assert run.codebook_yaml_hash != ""
+
+
 def test_run_extraction_raises_clear_error_for_unknown_run_id():
     engine = get_engine("sqlite://")
 

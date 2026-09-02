@@ -47,6 +47,13 @@ def validate_spec(spec: dict) -> None:
 
     labels = []
     for category in spec["categories"]:
+        if not isinstance(category, dict):
+            # YAML like `categories: ["protest", "not_protest"]` (a list of
+            # bare strings instead of mappings) parses fine at the top
+            # level -- `spec.get("categories")` is truthy -- but each
+            # `category` is then a str, and `category.get(...)` below
+            # raises a raw AttributeError instead of a clean ValueError.
+            raise ValueError(f"codebook category must be a YAML mapping (object), got {category!r}")
         label = category.get("label")
         # Deliberately isinstance(str), not just `not label` -- an unquoted
         # YAML integer label (e.g. `label: 0`) is falsy-adjacent under a

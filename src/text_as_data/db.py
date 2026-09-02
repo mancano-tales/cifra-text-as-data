@@ -73,6 +73,14 @@ class RunRecord(SQLModel, table=True):
     # for a run recording its own provenance.
     provider_mode: str = "api_key"  # "api_key" | "cli"
     provider_detail: str = ""  # the model id (api_key mode) or CLI command (cli mode)
+    # sha256 of the CodebookRecord.yaml_raw actually used by this run,
+    # filled in by run_extraction once it loads the codebook. Caching in
+    # extraction.py matches on this, not on codebook_id alone -- codebooks
+    # are edited in place (PUT /codebooks/{id} keeps the same id), and
+    # without a content hash a run against an edited codebook would
+    # silently reuse cached extractions produced under the codebook's
+    # *previous* definition instead of re-querying the LLM.
+    codebook_yaml_hash: str = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

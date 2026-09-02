@@ -32,6 +32,7 @@ def extract(
     return pd.DataFrame(rows)
 
 
+import hashlib
 import json
 import logging
 
@@ -74,6 +75,11 @@ def run_extraction(engine, run_id: int, provider: Provider) -> None:
         try:
             codebook_record = session.get(CodebookRecord, run.codebook_id)
             codebook = Codebook.from_yaml_string(codebook_record.yaml_raw)
+            codebook_yaml_hash = hashlib.sha256(codebook_record.yaml_raw.encode("utf-8")).hexdigest()
+            run.codebook_yaml_hash = codebook_yaml_hash
+            session.add(run)
+            session.commit()
+
             documents = session.exec(
                 select(DocumentRecord).where(DocumentRecord.corpus_id == run.corpus_id)
             ).all()
@@ -84,10 +90,22 @@ def run_extraction(engine, run_id: int, provider: Provider) -> None:
                     .join(RunRecord, ExtractionRecord.run_id == RunRecord.id)
                     .where(
                         ExtractionRecord.document_id == document.id,
+                        # Matching on the codebook's actual content hash,
+                        # not codebook_id alone -- a codebook can be
+                        # edited in place (same id, new yaml_raw), and a
+                        # cache hit keyed only on the id would silently
+                        # reuse extractions produced under the *old*
+                        # definition. RunRecord.codebook_id is still
+                        # required in the join so an unrelated codebook
+                        # that happens to hash-collide (practically
+                        # impossible with sha256, but free to assert)
+                        # can never match.
                         RunRecord.codebook_id == run.codebook_id,
+                        RunRecord.codebook_yaml_hash == codebook_yaml_hash,
                         RunRecord.model == run.model,
                         ExtractionRecord.categoria != ERROR_CATEGORIA,
                     )
+                    .order_by(ExtractionRecord.id.desc())
                 ).first()
 
                 if cached is not None:
