@@ -37,7 +37,42 @@
 - Support LLM providers beyond OpenAI in `examples/` (instructor supports
   multiple providers already; the core `extraction.py` is provider-agnostic
   since it only depends on the `instructor`-patched client interface).
+- Per-worktree Python virtualenv — `pip install -e .` currently repoints
+  the *global* site-packages editable install to whichever checkout ran it
+  last, so two sessions in two worktrees can silently clobber each other's
+  `import text_as_data` target. See
+  `docs/MULTI_AGENT_WORKTREES.md` § "Known friction" for the workaround
+  until this is fixed properly.
+
 ## Done
+
+- 2026-09-02 — Git-safety governance for the shared multi-agent working
+  directory, in response to a real incident (a `git checkout --orphan` +
+  `git clean -fdx` switched HEAD for all four sessions sharing one
+  directory and destroyed another session's uncommitted work). Two layers:
+  (1) `docs/MULTI_AGENT_WORKTREES.md` — the actual fix, documenting
+  `git worktree` per session, referenced from `AGENTS.md`'s rules section;
+  (2) `tools/guard_git_command.py`/`.sh` + `.claude/settings.json`'s
+  `PreToolUse` hook — defense-in-depth, a hardened port of
+  `agentic-workflow-template`'s guard, with every bug a 3-model red-team
+  review (claude-sonnet-4-6, gemini-3.7-flash-high, gemini-3.1-pro-high
+  via `agy`) found in the original fixed: parser desync on an unrecognized
+  global flag, fragile `&&`/`||` handling, `sh -c`/`eval` command hiding,
+  `git config alias.*` subcommand-name bypass, `symbolic-ref`/`update-ref`
+  moving HEAD without "checkout", `stash drop`/`clear`, and glob/directory
+  paths bypassing the exact-`.`-only restore/checkout check. Branch
+  switches are context-aware (free inside a worktree, require an explicit
+  `CIFRA_CONFIRM_SHARED_HEAD_SWITCH=1` prefix in the shared main
+  directory) rather than a blanket block, since all three models agreed
+  that would cripple legitimate work. Full investigation and the red-team
+  findings in detail:
+  `docs/research/2026-09-02_git_safety_governance_for_shared_agent_working_directory.md`.
+  45 new unit tests against the guard's `check_command()` directly,
+  including a replay of the actual incident's two commands confirming the
+  first (the branch switch) is now caught, which the original guard would
+  have missed. Verified live through the real `PreToolUse` mechanism, not
+  just unit tests: a real Bash tool call was intercepted and blocked by
+  Claude Code itself. 238/238 tests passing.
 
 - 2026-09-02 — Reproducibility verification (DAAF-inspired prospective
   item): `GET /runs/{run_id}/reproducibility?compare_to={other_run_id}`

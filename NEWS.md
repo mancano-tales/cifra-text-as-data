@@ -1,5 +1,37 @@
 # NEWS
 
+## 2026-09-02 (5)
+
+- Git-safety governance for the shared multi-agent working directory,
+  after a real incident: a `git checkout --orphan` + `git clean -fdx`
+  switched HEAD for all four Claude Code sessions sharing this repo's one
+  physical working directory at once, and destroyed another session's
+  uncommitted work. Rather than shipping the first fix that came to mind,
+  the resulting plan was red-teamed by three independent models
+  (claude-sonnet-4-6, gemini-3.7-flash-high, gemini-3.1-pro-high, via
+  `agy`) before any code changed — all three, independently, traced the
+  incident's own first command through the proposed guard and found it
+  would NOT have been blocked, and converged on the same diagnosis: a
+  shared HEAD/index/working-tree across agents is the actual defect, not
+  an insufficiently large command blocklist. Shipped two layers: (1)
+  `docs/MULTI_AGENT_WORKTREES.md`, documenting `git worktree` per session
+  as the real fix, referenced from `AGENTS.md`; (2) a hardened
+  `PreToolUse` hook (`tools/guard_git_command.py`/`.sh` +
+  `.claude/settings.json`) as honestly-scoped defense-in-depth, fixing
+  every concrete bug the red-team found in the source template it was
+  ported from (parser desync on unrecognized global flags, fragile
+  `&&`/`||` handling, `sh -c`/`eval` bypass, a `git config alias.*`
+  subcommand-shadowing bypass found by only one of the three models,
+  direct-ref-write HEAD moves, `stash drop`/`clear`, glob/directory
+  restore paths). Branch switches are worktree-aware rather than blanket-
+  blocked. Full investigation, the three critiques in detail, and the
+  cross-model convergence/divergence analysis:
+  `docs/research/2026-09-02_git_safety_governance_for_shared_agent_working_directory.md`.
+  45 new tests against the guard directly (including a replay of the
+  actual incident, confirming the fix catches what the original wouldn't
+  have), verified live through the real `PreToolUse` mechanism, not just
+  unit tests. 238/238 passing.
+
 ## 2026-09-02 (4)
 
 - CI added: `.github/workflows/ci.yml` runs `pytest` (backend) and

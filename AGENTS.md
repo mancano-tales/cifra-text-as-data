@@ -7,6 +7,20 @@ repo was scaffolded at "light" governance level, same tier as
 
 ## Rules for AI agents working in this repo
 
+- **Multiple concurrent sessions: use `git worktree`, not the same
+  directory.** If you are (or are about to be) one of several Claude Code
+  sessions working on this repo at once, read
+  [`docs/MULTI_AGENT_WORKTREES.md`](docs/MULTI_AGENT_WORKTREES.md) before
+  running anything that switches branches or discards working-tree state.
+  On 2026-09-02, four sessions sharing one physical directory led to one
+  session's `git checkout --orphan` + `git clean -fdx` switching `HEAD`
+  for all four at once and destroying another session's uncommitted work
+  — full incident and a 3-model red-team review of the fix in
+  `docs/research/2026-09-02_git_safety_governance_for_shared_agent_working_directory.md`.
+  A `PreToolUse` hook (`.claude/settings.json` + `tools/guard_git_command.py`)
+  blocks the worst of this as defense-in-depth, but it is explicitly not a
+  substitute for working in separate worktrees — see the hook's own module
+  docstring for what it does and does not cover.
 - **Language**: everything in this repository — code, comments, docstrings,
   README/NEWS/TODO, commit messages — is in **English**. This is a
   deliberate deviation from the parent `MancanoSync` ecosystem, whose root
