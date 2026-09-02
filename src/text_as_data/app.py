@@ -143,6 +143,22 @@ def _extraction_with_snippet(session: Session, extraction: ExtractionRecord) -> 
     return {**extraction.model_dump(), "document_snippet": snippet}
 
 
+def _extractions_with_snippets(session: Session, extractions: list[ExtractionRecord]) -> list[dict]:
+    """Batch version of `_extraction_with_snippet` -- one query for every
+    document a run's extractions reference, instead of one query per row.
+    A single-row helper is fine for `update_extraction`, but the results
+    and export endpoints list every row in a run, where a per-row lookup
+    turns into N+1 queries as a run grows."""
+    document_ids = {e.document_id for e in extractions}
+    documents = (
+        session.exec(select(DocumentRecord).where(DocumentRecord.id.in_(document_ids))).all()
+        if document_ids
+        else []
+    )
+    snippets = {d.id: d.text[:160] for d in documents}
+    return [{**e.model_dump(), "document_snippet": snippets.get(e.document_id, "")} for e in extractions]
+
+
 @app.get("/runs/{run_id}/results")
 def get_run_results(run_id: int, engine=Depends(get_engine_dependency)):
     with Session(engine) as session:
@@ -151,7 +167,7 @@ def get_run_results(run_id: int, engine=Depends(get_engine_dependency)):
             raise HTTPException(status_code=404, detail=f"run {run_id} not found")
 
         rows = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
-        return [_extraction_with_snippet(session, row) for row in rows]
+        return _extractions_with_snippets(session, rows)
 
 
 class UpdateExtractionRequest(BaseModel):
@@ -201,7 +217,7 @@ def export_run_results(
             raise HTTPException(status_code=404, detail=f"run {run_id} not found")
 
         rows = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
-        result_rows = [_extraction_with_snippet(session, row) for row in rows]
+        result_rows = _extractions_with_snippets(session, rows)
 
     content = _EXPORT_BUILDERS[format](result_rows)
     return Response(
