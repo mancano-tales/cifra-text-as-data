@@ -2,6 +2,7 @@
 name = "text-as-data"
 version = "0.1.0"
 description = "Pipeline to turn unstructured text into a structured table via LLM classification against an explicit codebook, validated against human coding."
+license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = [
     "instructor>=1.0",
