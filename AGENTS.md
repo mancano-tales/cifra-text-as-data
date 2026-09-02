@@ -109,11 +109,41 @@ setup rather than reintroduce hardcoded English strings.
 
 ### Architecture (closed decision — do not reopen without a strong reason)
 
-Why not a single-file HTML tool like QualiLab: QualiLab is 100% manual
-coding — it makes no batched API calls. This project needs to run
-hundreds/thousands of LLM calls reliably (retry, cache, cost tracking,
-execution that survives closing the tab). That calls for a real backend
-process, not just JS in the browser.
+Why not a single-file HTML tool like QualiLab: **correction (2026-09-01)** —
+an earlier version of this paragraph claimed QualiLab was "100% manual
+coding" with no batched API calls. That was wrong, and was written without
+reading QualiLab's source; verified by cloning
+[`luizpf42/QualiLab`](https://github.com/luizpf42/QualiLab) (v1.4.50) and
+reading `README.en.md` and `docs/MANUAL.en.md` directly. QualiLab does call
+LLMs: five "Auto-coding" assistants (Suggest Coding, Suggest Attributes,
+Define Attribute, Organize Codes, plus a non-AI Repeat Coding), an "Analyze
+with AI" chat, an "Explore with AI" agentic/RAG mode, and a **blind
+evaluation** feature that runs one call per document and returns an
+agreement scoreboard — conceptually close to a validation step.
+
+The real difference is not manual-vs-automated, it is architectural, and
+holds up under inspection of the source:
+- **Scale ceiling**: QualiLab caps a single send at ~600,000 characters
+  (~200 pages) total, and documents beyond that are dropped entirely — "a
+  generous selection fits... but not the whole corpus at once"
+  (`MANUAL.en.md`). This project needs to run hundreds/thousands of LLM
+  calls over a full corpus with no such ceiling.
+- **Execution model**: QualiLab's AI calls are synchronous within the open
+  browser tab, with no persistent job queue and no resumable run if the tab
+  closes — a direct consequence of its deliberate single-file,
+  no-server-of-its-own design ("Extensibility through data, not plugins... has no plugin architecture, and does not intend to have one: it clashes
+  head-on with the single-file design," per its own README). This project's
+  Phase 1 acceptance criterion — execution that survives closing the tab,
+  with retry and cache — requires a real backend process.
+- **Validation rigor**: QualiLab's blind-evaluation scoreboard explicitly
+  disclaims statistical rigor ("it does not tell 27 from 28... read it as
+  an order of magnitude, not a grade" — `MANUAL.en.md`). It is an agreement
+  count, not Cohen's kappa or per-category precision/recall/F1.
+
+QualiLab's own stated extension surface is **not** code contribution but
+its open `.qualilab` file format (documented, lossless JSON) — worth
+revisiting as an import/export target for corpus interop, rather than as a
+reason to build inside its codebase.
 
 **Stack decision**: a lightweight local backend (Python), not a
 single-file browser app. Batched LLM calls need retry/cache/cost control

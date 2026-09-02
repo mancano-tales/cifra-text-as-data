@@ -17,6 +17,18 @@
 - Support LLM providers beyond OpenAI in `examples/` (instructor supports
   multiple providers already; the core `extraction.py` is provider-agnostic
   since it only depends on the `instructor`-patched client interface).
+- QualiLab interoperability: import a `.qualilab` project as a corpus
+  source (its `documents`, optionally its existing `codes`/`doc_values` as
+  context) and export Cifra's automated extractions back into the same
+  format, as a coding layer clearly marked "AI, unattended" and distinct
+  from QualiLab's human-authored layers — so a researcher can round-trip
+  between automated coding here and manual review/reconciliation in
+  QualiLab. The goal is interop through the open `.qualilab` file format,
+  not a shared codebase: see `AGENTS.md` § "Why not a single-file HTML
+  tool like QualiLab" (2026-09-01 correction) for why building Cifra's
+  features inside QualiLab's own codebase was ruled out — the author's
+  README explicitly rejects a plugin architecture as incompatible with its
+  single-file design.
 
 ## Done
 
