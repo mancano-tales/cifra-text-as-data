@@ -3,7 +3,10 @@ from __future__ import annotations
 import csv
 import io
 
+import docx
+import ftfy
 import openpyxl
+from pypdf import PdfReader
 
 
 def parse_csv_rows(content: bytes) -> list[dict]:
@@ -34,3 +37,41 @@ def parse_xlsx_rows(content: bytes) -> list[dict]:
             continue
         rows.append(row)
     return rows
+
+
+def parse_txt_bytes(content: bytes) -> str:
+    """Decode a standalone .txt/.md file's bytes into plain text.
+
+    Runs `ftfy.fix_text()` on the result -- already a project dependency
+    for exactly this reason (see AGENTS.md's V7 pilot mojibake note): a
+    document dropped in by a researcher may already be
+    Windows-1252-decoded-as-something-else corrupted before it ever
+    reaches Cifra, and fixing that once at import time is cheaper than
+    every downstream consumer having to guard against it.
+    """
+    return ftfy.fix_text(content.decode("utf-8-sig"))
+
+
+def parse_docx_bytes(content: bytes) -> str:
+    """Extract plain text from a .docx file: every paragraph, then every
+    table cell (tables don't appear in `Document.paragraphs` at all), each
+    joined by a blank line. Formatting (bold, headings, etc.) is discarded
+    -- Cifra codes text content, not document structure."""
+    document = docx.Document(io.BytesIO(content))
+    parts = [p.text for p in document.paragraphs if p.text.strip()]
+    for table in document.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                if cell.text.strip():
+                    parts.append(cell.text)
+    return "\n\n".join(parts)
+
+
+def parse_pdf_bytes(content: bytes) -> str:
+    """Extract plain text from a PDF, page by page, joined by a blank
+    line. No OCR: a scanned/image-only PDF yields empty or near-empty
+    text per page, silently -- out of scope per AGENTS.md's explicitly
+    deferred "image/scanned-PDF extraction (OCR)"."""
+    reader = PdfReader(io.BytesIO(content))
+    pages = [page.extract_text() or "" for page in reader.pages]
+    return "\n\n".join(p for p in pages if p.strip())

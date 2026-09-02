@@ -15,8 +15,6 @@
   is guaranteed unique per document) or `source="manual"` rows from a
   plain-CSV gold import, not blindly passing every row for a codebook
   straight into the merge.
-- TXT/DOCX/PDF corpus import (Slice 2 covered CSV/XLSX/pasted text only).
-
 ## Prospective
 
 - DAAF-style **Reproducibility Verification** as its own validation mode
@@ -56,6 +54,21 @@
   since it only depends on the `instructor`-patched client interface).
 ## Done
 
+- 2026-09-02 — TXT/MD/DOCX/PDF corpus import (Slice 2 covered
+  CSV/XLSX/pasted text only): `POST /corpora/documents`, a multi-file
+  upload where each file is one document (unlike CSV/XLSX's one-row-is-
+  one-document) — a mixed batch of file types in one request is fine,
+  dispatched per file by extension. New `corpus_import.py` parsers:
+  `parse_txt_bytes` (also runs `ftfy.fix_text()`, already a dependency
+  for exactly the mojibake class of bug AGENTS.md's V7 pilot notes
+  describe), `parse_docx_bytes` (paragraphs, then table cells --
+  `python-docx`), `parse_pdf_bytes` (page by page, no OCR — scanned/
+  image-only PDFs are explicitly out of scope per AGENTS.md). All-or-
+  nothing on a bad file in a batch, matching the CSV/XLSX endpoints'
+  existing convention. `python-docx`/`pypdf` added to `pyproject.toml`
+  (were already present in the dev environment but undeclared). 12 new
+  tests, including a hand-built minimal-but-valid PDF (correct xref
+  table and all) so PDF extraction is tested for real rather than mocked.
 - 2026-09-02 — QualiLab interoperability: `POST /corpora/import-qualilab`
   (import a `.qualilab` project's documents as a corpus, preserving
   QualiLab's own doc id as the new `DocumentRecord.external_id`),

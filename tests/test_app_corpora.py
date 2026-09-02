@@ -1,4 +1,5 @@
 import io
+import json
 
 import openpyxl
 from fastapi.testclient import TestClient
@@ -149,3 +150,72 @@ def test_list_corpus_documents_404_for_unknown_corpus():
     response = client.get("/corpora/does-not-exist/documents")
 
     assert response.status_code == 404
+
+
+def _docx_bytes(text: str) -> bytes:
+    import docx
+
+    document = docx.Document()
+    document.add_paragraph(text)
+    buffer = io.BytesIO()
+    document.save(buffer)
+    return buffer.getvalue()
+
+
+def test_documents_upload_accepts_a_mixed_txt_and_docx_batch():
+    client, engine = _make_test_client()
+
+    response = client.post(
+        "/corpora/documents",
+        data={"name": "mixed_batch"},
+        files=[
+            ("files", ("interview1.txt", b"Plain text interview.", "text/plain")),
+            ("files", ("interview2.docx", _docx_bytes("Word interview."), "application/octet-stream")),
+        ],
+    )
+
+    assert response.status_code == 200
+    assert response.json()["document_count"] == 2
+    with Session(engine) as session:
+        docs = session.exec(select(DocumentRecord).where(DocumentRecord.corpus_id == "mixed_batch")).all()
+        texts = sorted(d.text for d in docs)
+        assert texts == ["Plain text interview.", "Word interview."]
+        filenames = sorted(json.loads(d.metadata_json)["filename"] for d in docs)
+        assert filenames == ["interview1.txt", "interview2.docx"]
+
+
+def test_documents_upload_rejects_unsupported_extension():
+    client, _ = _make_test_client()
+
+    response = client.post(
+        "/corpora/documents",
+        data={"name": "bad_batch"},
+        files=[("files", ("notes.exe", b"whatever", "application/octet-stream"))],
+    )
+
+    assert response.status_code == 422
+
+
+def test_documents_upload_rejects_corrupt_docx():
+    client, _ = _make_test_client()
+
+    response = client.post(
+        "/corpora/documents",
+        data={"name": "broken_batch"},
+        files=[("files", ("broken.docx", b"not a real docx file", "application/octet-stream"))],
+    )
+
+    assert response.status_code == 400
+
+
+def test_documents_upload_409_on_duplicate_corpus_name():
+    client, _ = _make_test_client()
+    client.post(
+        "/corpora/documents", data={"name": "dup_docs"}, files=[("files", ("a.txt", b"a", "text/plain"))]
+    )
+
+    response = client.post(
+        "/corpora/documents", data={"name": "dup_docs"}, files=[("files", ("b.txt", b"b", "text/plain"))]
+    )
+
+    assert response.status_code == 409

@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from .codebook import spec_from_yaml_string, spec_to_yaml_string
-from .corpus_import import parse_csv_rows, parse_xlsx_rows
+from .corpus_import import parse_csv_rows, parse_docx_bytes, parse_pdf_bytes, parse_txt_bytes, parse_xlsx_rows
 from .db import CodebookRecord, DocumentRecord, ExtractionRecord, HumanLabelRecord, RunRecord, get_engine
 from .disclosure import build_disclosure
 from .export import results_to_csv_bytes, results_to_json_bytes, results_to_xlsx_bytes
@@ -325,6 +325,50 @@ async def create_corpus_from_xlsx(
         raise HTTPException(status_code=400, detail=f"could not parse file as XLSX: {exc}") from exc
     texts = _rows_to_texts(rows, text_column)
     return _create_documents_or_409(engine, name, texts)
+
+
+_DOCUMENT_PARSERS = {
+    "txt": parse_txt_bytes,
+    "md": parse_txt_bytes,
+    "docx": parse_docx_bytes,
+    "pdf": parse_pdf_bytes,
+}
+
+
+@app.post("/corpora/documents")
+async def create_corpus_from_documents(
+    name: str = Form(...), files: list[UploadFile] = File(...), engine=Depends(get_engine_dependency)
+):
+    """Import standalone TXT/MD/DOCX/PDF files as a corpus -- one uploaded
+    file is one document, unlike CSV/XLSX's one-row-is-one-document. A
+    mixed batch (some .txt, some .pdf) is fine; each file is dispatched by
+    its own extension. All-or-nothing on parse failures, matching the
+    CSV/XLSX endpoints' convention: one bad file fails the whole request
+    rather than silently importing a partial corpus."""
+    records: list[DocumentRecord] = []
+    for upload in files:
+        extension = (upload.filename or "").rsplit(".", 1)[-1].lower()
+        parser = _DOCUMENT_PARSERS.get(extension)
+        if parser is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"{upload.filename!r}: unsupported file type {extension!r} "
+                f"(expected one of {sorted(_DOCUMENT_PARSERS)})",
+            )
+        content = await upload.read()
+        try:
+            text = parser(content)
+        except Exception as exc:  # noqa: BLE001 -- any parser failure means "not a valid <type> file"
+            raise HTTPException(
+                status_code=400, detail=f"could not parse {upload.filename!r} as .{extension}: {exc}"
+            ) from exc
+        records.append(
+            DocumentRecord(
+                corpus_id=name, text=text, metadata_json=json.dumps({"filename": upload.filename})
+            )
+        )
+
+    return _create_document_records_or_409(engine, name, records)
 
 
 def _create_document_records_or_409(engine, name: str, records: list[DocumentRecord]) -> dict:
