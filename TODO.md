@@ -2,19 +2,9 @@
 
 ## Pending
 
-- Validation screen (Screen 5) — gold-label import, Cohen's kappa (the
-  metric `agreement_report()` already computes) surfaced in the UI,
-  category-level precision/recall/F1, and a disagreement-review list.
-  Gets its own spec/plan per `AGENTS.md` § "Build order for the MVP".
-  Note (2026-09-02, updated): `HumanLabelRecord` has landed (QualiLab
-  interop, below) — multiple rows allowed per `(document_id,
-  codebook_id)`, distinguished by `coder`/`source`. `agreement_report()`
-  needs exactly one gold row per document; the safe default is filtering
-  to `source="qualilab_import"` rows imported with `layer="final"` (import
-  already rejects a file with >1 "final" row per document, so that subset
-  is guaranteed unique per document) or `source="manual"` rows from a
-  plain-CSV gold import, not blindly passing every row for a codebook
-  straight into the merge.
+(none — every screen in `AGENTS.md`'s original MVP list is now built;
+see Slice 4 in Done below)
+
 ## Prospective
 
 - Open items from the LLM-pipeline verification methodology (see
@@ -45,6 +35,40 @@
   until this is fixed properly.
 
 ## Done
+
+- 2026-09-02 — Slice 4, Validation screen: closes the last unbuilt
+  screen from `AGENTS.md`'s original MVP list — every one of the 5
+  screens now exists. `POST /runs/{run_id}/gold-labels` (CSV upload
+  shaped like the results export plus a `gold_categoria` column, blank
+  cells skipped, any non-blank value not a real codebook category
+  rejects the whole upload with every bad row listed) and
+  `GET /runs/{run_id}/validation` (coverage, per-category
+  accuracy/kappa/precision/recall/F1 via `agreement_report()`, a
+  disagreement list with the same `document_snippet` convention as
+  results). A document with more than one gold row (e.g. a QualiLab
+  "individual"-layer import) is excluded from the report and counted,
+  never silently resolved to one value. Frontend: `ValidationPanel.tsx`,
+  composed into `ResultsTable.tsx` below the existing results table
+  (not a separate tab — a validation report only makes sense in the
+  context of one specific run). Re-uploading gold labels for an
+  already-labeled document replaces the prior manual row instead of
+  appending a second one, so correcting a typo doesn't get
+  misinterpreted as a second coder and excluded — the same class of bug
+  the round-2 red-team review fixed on the QualiLab gold-label import
+  path a few hours earlier, applied here to the plain-CSV path before
+  it could ship with the same gap. 18 new backend tests (12 planned +
+  6 added: missing-columns, non-integer document_id, reimport-replaces,
+  empty-report-before-any-labels), 238/238 passing (now 238 total after
+  landing alongside the git-safety work below). Manually verified
+  end-to-end in a real browser against real run data (not just curl):
+  export → edit → re-upload → report renders with correct coverage/
+  metrics/disagreements, confirmed in both PT and EN. Implements
+  `docs/superpowers/specs/2026-09-02-slice-4-validation-screen-design.md`
+  and `docs/superpowers/plans/2026-09-02-slice-4-validation-screen.md`
+  (adapted from the plan's assumed `HumanLabelRecord` shape, written
+  before QualiLab interop landed, to the real one — a `layer` field the
+  plan didn't know about, which defaults correctly to `"final"` for a
+  manual CSV upload).
 
 - 2026-09-02 — Git-safety governance for the shared multi-agent working
   directory, in response to a real incident (a `git checkout --orphan` +

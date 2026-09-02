@@ -1,5 +1,44 @@
 # NEWS
 
+## 2026-09-02 (6)
+
+- Slice 4, Validation screen — the last unbuilt screen from `AGENTS.md`'s
+  original MVP list. Every one of the 5 screens now exists.
+  `POST /runs/{run_id}/gold-labels` accepts a CSV shaped like the results
+  export plus a `gold_categoria` column (blank cells skipped as "not yet
+  reviewed"; any non-blank value that isn't a real codebook category
+  rejects the whole upload with every bad row listed, not just the
+  first). `GET /runs/{run_id}/validation` reports coverage, per-category
+  accuracy/kappa/precision/recall/F1 (via the `agreement_report()`
+  function CI/round-2 already exercise), and a disagreement list. A
+  document with more than one gold row — e.g. a QualiLab
+  "individual"-layer multi-coder import — is excluded from the report
+  and counted, never silently resolved to one value on the researcher's
+  behalf. `ValidationPanel.tsx` renders below the existing results table
+  in the Runs screen rather than as a separate tab, since a validation
+  report only makes sense in the context of one specific run's own
+  predictions.
+  Re-uploading gold labels for a document already manually labeled
+  replaces the prior row instead of appending a second one — without
+  this, correcting a typo in a re-upload would create what looks like a
+  second coder and get the document wrongly excluded as multi-coder.
+  This is the identical bug class the round-2 red-team review fixed
+  hours earlier on the QualiLab gold-label import path (see (2) below);
+  applying the same fix here, before shipping, meant Slice 4 never
+  shipped with the gap in the first place.
+  Implemented from a spec/plan written and committed by an earlier
+  session, adapted where the real landed `HumanLabelRecord` (a `layer`
+  field the plan pre-dated) differed from what the plan assumed.
+  18 new backend tests (12 from the plan, 6 added), 238/238 passing.
+  Manually verified end-to-end against real run data in an actual
+  browser (not just curl): started both dev servers, opened a real run
+  with 26 documents, exported its results, built a small gold-label CSV
+  by hand (one row agreeing with the model, one disagreeing), uploaded
+  it through the real form flow, and confirmed the coverage line,
+  per-category metrics table, and disagreement list all rendered
+  correctly with the real numbers — then re-confirmed the same in
+  English via the language toggle.
+
 ## 2026-09-02 (5)
 
 - Git-safety governance for the shared multi-agent working directory,
