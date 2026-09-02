@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Cifra</title>
+<title>Architecture – Cifra</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -36,7 +36,8 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./how-it-works.html" rel="next">
+<link href="./validation.html" rel="next">
+<link href="./how-it-works.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
@@ -81,8 +82,8 @@ ul.task-list li input[type="checkbox"] {
 
 
 <link rel="stylesheet" href="styles.css">
-<meta property="og:title" content="Cifra">
-<meta property="og:description" content="Codebook-driven text coding, validated against human coding">
+<meta property="og:title" content="Architecture – Cifra">
+<meta property="og:description" content="Stack, data model, and the decisions behind them">
 <meta property="og:site_name" content="Cifra">
 </head>
 
@@ -309,7 +310,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./index.html">Overview</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./architecture.html">Architecture</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -323,7 +324,7 @@ ul.task-list li input[type="checkbox"] {
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./index.html" class="sidebar-item-text sidebar-link active">
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Overview</span></a>
   </div>
 </li>
@@ -335,7 +336,7 @@ ul.task-list li input[type="checkbox"] {
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./architecture.html" class="sidebar-item-text sidebar-link">
+  <a href="./architecture.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Architecture</span></a>
   </div>
 </li>
@@ -355,13 +356,13 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#the-problem" id="toc-the-problem" class="nav-link active" data-scroll-target="#the-problem">The problem</a></li>
-  <li><a href="#what-cifra-is" id="toc-what-cifra-is" class="nav-link" data-scroll-target="#what-cifra-is">What Cifra is</a></li>
-  <li><a href="#what-automated-does-not-mean" id="toc-what-automated-does-not-mean" class="nav-link" data-scroll-target="#what-automated-does-not-mean">What “automated” does not mean</a></li>
-  <li><a href="#why-validation-is-not-a-footnote" id="toc-why-validation-is-not-a-footnote" class="nav-link" data-scroll-target="#why-validation-is-not-a-footnote">Why validation is not a footnote</a></li>
-  <li><a href="#current-status" id="toc-current-status" class="nav-link" data-scroll-target="#current-status">Current status</a></li>
+  <li><a href="#stack" id="toc-stack" class="nav-link active" data-scroll-target="#stack">Stack</a></li>
+  <li><a href="#why-not-a-single-file-browser-tool-like-qualilab" id="toc-why-not-a-single-file-browser-tool-like-qualilab" class="nav-link" data-scroll-target="#why-not-a-single-file-browser-tool-like-qualilab">Why not a single-file browser tool like QualiLab</a></li>
+  <li><a href="#provider-layer-agent-agnostic-by-design" id="toc-provider-layer-agent-agnostic-by-design" class="nav-link" data-scroll-target="#provider-layer-agent-agnostic-by-design">Provider layer — agent-agnostic by design</a></li>
+  <li><a href="#data-model-sqlite-high-level" id="toc-data-model-sqlite-high-level" class="nav-link" data-scroll-target="#data-model-sqlite-high-level">Data model (SQLite, high level)</a></li>
+  <li><a href="#roadmap-desktop-packaging" id="toc-roadmap-desktop-packaging" class="nav-link" data-scroll-target="#roadmap-desktop-packaging">Roadmap: desktop packaging</a></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/mancano-tales/cifra-text-as-data/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/mancano-tales/cifra-text-as-data/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/mancano-tales/cifra-text-as-data/blob/main/architecture.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/mancano-tales/cifra-text-as-data/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -369,8 +370,8 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Cifra</h1>
-<p class="subtitle lead">Codebook-driven text coding, validated against human coding</p>
+<h1 class="title">Architecture</h1>
+<p class="subtitle lead">Stack, data model, and the decisions behind them</p>
 </div>
 
 
@@ -387,44 +388,49 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="the-problem" class="level2">
-<h2 class="anchored" data-anchor-id="the-problem">The problem</h2>
-<p>Social scientists — political science, sociology, geography — routinely turn unstructured text into categorical data: is this news article describing a protest? does this public statement support or oppose a policy? Historically this is done by hand, with a research assistant reading each document and filling in a spreadsheet against a codebook the researcher wrote.</p>
-<p>LLMs can now automate a large share of that mechanical work. But every researcher who tries currently reinvents the same pipeline from scratch — and, more importantly, most skip the part that actually makes automated coding trustworthy: checking whether the model followed <em>this specific</em> codebook, or fell back on its own generic notion of the concept.</p>
+<section id="stack" class="level2">
+<h2 class="anchored" data-anchor-id="stack">Stack</h2>
+<p><strong>Backend</strong>: Python + FastAPI, running locally via <code>uvicorn</code>. Responsible for LLM calls, a background job queue (nothing heavier than a Python background task in the MVP — no Redis/Celery), and a SQLite database (via SQLModel) holding codebooks, corpora, runs, and results.</p>
+<p><strong>Frontend</strong>: a Vite + React + TypeScript single-page app talking to the backend over <code>fetch</code>. Bilingual (PT-BR/EN) via <code>react-i18next</code>.</p>
+<p><strong>Local execution</strong>: the backend comes up on a local port and responds via <code>curl</code> with no frontend open at all — this is a deliberate acceptance criterion, checked repeatedly during development, not an implementation detail. If the backend ever needed the frontend to function, that would be a sign of improper coupling to fix, not a shortcut to take.</p>
 </section>
-<section id="what-cifra-is" class="level2">
-<h2 class="anchored" data-anchor-id="what-cifra-is">What Cifra is</h2>
-<p>Cifra is a local-first tool: the researcher authors a codebook (a concept, its categories, definitions, examples, boundary notes), points it at a text corpus, and the software calls an LLM to fill in a structured results table — one category, one rationale, one quoted evidence span per document. Every result carries a full audit trail: the exact prompt sent, the raw response received, which model and provider mode produced it.</p>
-<p>It is <strong>not</strong> a manual qualitative-coding tool — <a href="https://www.taguette.org/">Taguette</a>, <a href="https://github.com/ccbogel/QualCoder">QualCoder</a>, and <a href="https://github.com/luizpf42/QualiLab">QualiLab</a> already do that well. Cifra is closer to the inverse: it automates the mechanical categorization step so a human doesn’t have to read every row, while treating the researcher’s judgment — codebook design, model/parameter choices, and the decision of whether automated output is reliable enough to become research data — as non-negotiable and non-automatable.</p>
-</section>
-<section id="what-automated-does-not-mean" class="level2">
-<h2 class="anchored" data-anchor-id="what-automated-does-not-mean">What “automated” does not mean</h2>
-<p>Automation applies to one step: turning text into a category without a human reading every row. It does not remove the researcher from anything else. The researcher is still solely responsible for:</p>
+<section id="why-not-a-single-file-browser-tool-like-qualilab" class="level2">
+<h2 class="anchored" data-anchor-id="why-not-a-single-file-browser-tool-like-qualilab">Why not a single-file browser tool like QualiLab</h2>
+<p>The honest version of this comparison, corrected after actually reading QualiLab’s source rather than assuming: QualiLab is not purely manual — it has five LLM-backed “Auto-coding” assistants and a blind-evaluation feature conceptually close to a validation step. The real difference is architectural, not manual-vs-automated:</p>
 <ul>
-<li><strong>designing the codebook</strong> — which categories exist, how each is defined, where the conceptual boundaries sit;</li>
-<li><strong>choosing the pipeline</strong> — which corpus, which model, which provider;</li>
-<li><strong>interpreting results</strong>; and</li>
-<li><strong>deciding, via validation, whether automated coding is reliable enough to use as data.</strong></li>
+<li><strong>Scale ceiling</strong>: QualiLab caps a single send at roughly 600,000 characters total, with documents beyond that dropped entirely. Cifra needs to run hundreds or thousands of LLM calls over a full corpus with no such ceiling.</li>
+<li><strong>Execution model</strong>: QualiLab’s AI calls are synchronous within the open browser tab, with no persistent job queue and no resumable run if the tab closes — a direct consequence of its deliberate single-file, no-server-of-its-own design. Cifra’s batched calls need retry, caching, and cost tracking, and must survive closing the tab; that calls for a real backend process.</li>
+<li><strong>Credential handling</strong>: routing an API key through browser JavaScript alone is uncomfortable and unsafe for a tool meant to run large, billed batches. A local backend keeps the key server-side, never shipped to the page.</li>
 </ul>
-<p>The Codebook Editor is the most important screen in the software, not a form to get through before “the real part.”</p>
+<p>This is not a reason to ignore QualiLab — it’s the reason Cifra treats interoperability with it as a real priority (round-tripping corpora and gold labels) rather than duplicating its mature manual-review UI from scratch. See the codebook/data model below for where that interop lands.</p>
 </section>
-<section id="why-validation-is-not-a-footnote" class="level2">
-<h2 class="anchored" data-anchor-id="why-validation-is-not-a-footnote">Why validation is not a footnote</h2>
-<p><a href="https://arxiv.org/abs/2407.10747">Halterman &amp; Keith (2025)</a> — and the same group’s 2026 follow-up — show that off-the-shelf LLMs frequently ignore a codebook’s specific operationalization and substitute their own generic notion of a concept instead: including a labor strike under “protest” even when the codebook explicitly excludes it, for example. A model that looks fluent is not the same as a model that followed the instructions.</p>
-<p>Cifra ran this failure mode for real, not hypothetically. See <a href="./validation.html">Why Validation Matters</a> for the numbers: an under-specified codebook produced results with essentially zero discriminating power on a third of a real test batch, and a hypothesis’s own scope condition got silently ignored. Enriching the codebook — not switching models — fixed both, and the before/after is verifiable, not just asserted.</p>
+<section id="provider-layer-agent-agnostic-by-design" class="level2">
+<h2 class="anchored" data-anchor-id="provider-layer-agent-agnostic-by-design">Provider layer — agent-agnostic by design</h2>
+<p>Two credential modes behind one interface (<code>Provider.extract</code>), so the extraction engine never branches on which is active:</p>
+<ol type="1">
+<li><strong>CLI mode</strong> — shells out to an installed CLI the researcher already pays for (Claude Code, Codex, or a generic command adapter). Best-effort only: no schema-enforcement mechanism equivalent to function-calling, so a higher error rate is the accepted trade-off for not requiring a separately billed API key.</li>
+<li><strong>API-key mode</strong> — a direct key via <code>instructor</code>, the reliable, guaranteed-schema path for real, large coding runs.</li>
+</ol>
 </section>
-<section id="current-status" class="level2">
-<h2 class="anchored" data-anchor-id="current-status">Current status</h2>
-<p>Cifra is pre-1.0, under active development. As of this page:</p>
+<section id="data-model-sqlite-high-level" class="level2">
+<h2 class="anchored" data-anchor-id="data-model-sqlite-high-level">Data model (SQLite, high level)</h2>
 <ul>
-<li><strong>Corpus import</strong> — CSV/XLSX/pasted text, with column mapping.</li>
-<li><strong>Codebook editor</strong> — structured form with a live YAML preview.</li>
-<li><strong>Runs</strong> — kick off an extraction against a corpus + codebook, watch it progress, pick API-key mode (schema enforced via <a href="https://github.com/jxnl/instructor"><code>instructor</code></a>) or CLI mode (any installed CLI the researcher already has a subscription for).</li>
-<li><strong>Results</strong> — browsable table, inline edits, CSV/XLSX/JSON export, and a per-run <a href="https://llm-checklist.com/">GUIDE-LLM</a>-shaped AI-use disclosure report.</li>
-<li><strong>Validation</strong> — gold-label import (including round-tripping with QualiLab), Cohen’s kappa, precision/recall/F1 per category.</li>
+<li><code>codebooks</code> — id, name, the codebook’s own YAML, created_at.</li>
+<li><code>documents</code> — id, corpus_id, text, metadata.</li>
+<li><code>runs</code> — id, codebook_id, corpus_id, model, provider_mode, provider_detail, status, created_at.</li>
+<li><code>extractions</code> — id, run_id, document_id, categoria, justificativa, trecho_evidencia, <strong>prompt_sent, raw_response</strong> (the audit trail — see <a href="./how-it-works.html">How It Works</a>).</li>
+<li><code>human_labels</code> — id, document_id, codebook_id, categoria, coder, source, layer — designed to hold multiple gold-coding rows per document (distinguishing a plain-CSV import from a QualiLab round-trip, and a “final” reconciled layer from an in-progress one), not just one gold label per document.</li>
 </ul>
-<p>See <a href="./how-it-works.html">How It Works</a> for the pipeline end to end, and <a href="./architecture.html">Architecture</a> for the technical design and why it looks the way it does.</p>
-<p>Source, issues, and full history: <a href="https://github.com/mancano-tales/cifra-text-as-data">github.com/mancano-tales/cifra-text-as-data</a>.</p>
+<p>Schema changes to an already-running local database are applied additively at every startup (new columns get <code>ALTER TABLE ADD COLUMN</code>, existing data untouched) rather than requiring a manual fix to whatever <code>.sqlite</code> file happens to be live — a real bug hit twice during development before this was generalized.</p>
+</section>
+<section id="roadmap-desktop-packaging" class="level2">
+<h2 class="anchored" data-anchor-id="roadmap-desktop-packaging">Roadmap: desktop packaging</h2>
+<p>The long-term goal is a packaged desktop app (Windows/Mac/Linux), not a script only the author knows how to run — but not by rewriting anything in Tauri/Electron-native code from day one. The plan:</p>
+<ol type="1">
+<li><strong>Now</strong>: standalone FastAPI backend, sidecar-ready from the first commit, all persistence local.</li>
+<li><strong>Later, once the pipeline is validated with real use</strong>: compile the backend into a single binary (PyInstaller or Nuitka) and wrap it with Tauri (preferred over Electron — uses the system webview) as the desktop shell, auto-starting the binary as a sidecar. The LLM/ validation/cache logic is packaged, not rewritten — the same pattern today’s local-LLM desktop apps already use.</li>
+</ol>
+<p>Rewriting the orchestration/retry/cache/kappa logic in Rust or TypeScript would cost real engineering for no benefit over Python’s mature LLM SDKs and <code>scikit-learn</code> — that route is only worth reconsidering if the Python sidecar itself proves genuinely problematic to distribute cross-platform in practice.</p>
 
 
 </section>
@@ -852,10 +858,13 @@ ul.task-list li input[type="checkbox"] {
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
+      <a href="./how-it-works.html" class="pagination-link" aria-label="How It Works">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">How It Works</span>
+      </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./how-it-works.html" class="pagination-link" aria-label="How It Works">
-        <span class="nav-page-text">How It Works</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./validation.html" class="pagination-link" aria-label="Why Validation Matters">
+        <span class="nav-page-text">Why Validation Matters</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
@@ -867,7 +876,7 @@ ul.task-list li input[type="checkbox"] {
 </div>   
     <div class="nav-footer-center">
 <p>Built with <a href="https://quarto.org">Quarto</a></p>
-<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/mancano-tales/cifra-text-as-data/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/mancano-tales/cifra-text-as-data/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/mancano-tales/cifra-text-as-data/blob/main/architecture.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/mancano-tales/cifra-text-as-data/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
       <ul class="footer-items list-unstyled">
     <li class="nav-item compact">

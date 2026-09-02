@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Cifra</title>
+<title>Why Validation Matters – Cifra</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -26,6 +26,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -36,7 +71,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./how-it-works.html" rel="next">
+<link href="./architecture.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
@@ -81,8 +116,8 @@ ul.task-list li input[type="checkbox"] {
 
 
 <link rel="stylesheet" href="styles.css">
-<meta property="og:title" content="Cifra">
-<meta property="og:description" content="Codebook-driven text coding, validated against human coding">
+<meta property="og:title" content="Why Validation Matters – Cifra">
+<meta property="og:description" content="Not a checklist item — the thing that separates data from a guess">
 <meta property="og:site_name" content="Cifra">
 </head>
 
@@ -309,7 +344,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./index.html">Overview</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./validation.html">Why Validation Matters</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -323,7 +358,7 @@ ul.task-list li input[type="checkbox"] {
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./index.html" class="sidebar-item-text sidebar-link active">
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Overview</span></a>
   </div>
 </li>
@@ -341,7 +376,7 @@ ul.task-list li input[type="checkbox"] {
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./validation.html" class="sidebar-item-text sidebar-link">
+  <a href="./validation.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Why Validation Matters</span></a>
   </div>
 </li>
@@ -355,13 +390,14 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#the-problem" id="toc-the-problem" class="nav-link active" data-scroll-target="#the-problem">The problem</a></li>
-  <li><a href="#what-cifra-is" id="toc-what-cifra-is" class="nav-link" data-scroll-target="#what-cifra-is">What Cifra is</a></li>
-  <li><a href="#what-automated-does-not-mean" id="toc-what-automated-does-not-mean" class="nav-link" data-scroll-target="#what-automated-does-not-mean">What “automated” does not mean</a></li>
-  <li><a href="#why-validation-is-not-a-footnote" id="toc-why-validation-is-not-a-footnote" class="nav-link" data-scroll-target="#why-validation-is-not-a-footnote">Why validation is not a footnote</a></li>
-  <li><a href="#current-status" id="toc-current-status" class="nav-link" data-scroll-target="#current-status">Current status</a></li>
+  <li><a href="#the-claim-and-why-it-needs-more-than-a-citation" id="toc-the-claim-and-why-it-needs-more-than-a-citation" class="nav-link active" data-scroll-target="#the-claim-and-why-it-needs-more-than-a-citation">The claim, and why it needs more than a citation</a></li>
+  <li><a href="#the-test-a-real-bayesian-process-tracing-pilot" id="toc-the-test-a-real-bayesian-process-tracing-pilot" class="nav-link" data-scroll-target="#the-test-a-real-bayesian-process-tracing-pilot">The test: a real Bayesian process-tracing pilot</a></li>
+  <li><a href="#what-went-wrong" id="toc-what-went-wrong" class="nav-link" data-scroll-target="#what-went-wrong">What went wrong</a></li>
+  <li><a href="#the-fix-and-the-proof-it-worked" id="toc-the-fix-and-the-proof-it-worked" class="nav-link" data-scroll-target="#the-fix-and-the-proof-it-worked">The fix, and the proof it worked</a></li>
+  <li><a href="#a-second-uncomfortable-finding-single-run-variance" id="toc-a-second-uncomfortable-finding-single-run-variance" class="nav-link" data-scroll-target="#a-second-uncomfortable-finding-single-run-variance">A second, uncomfortable finding: single-run variance</a></li>
+  <li><a href="#what-this-means-for-using-cifra" id="toc-what-this-means-for-using-cifra" class="nav-link" data-scroll-target="#what-this-means-for-using-cifra">What this means for using Cifra</a></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/mancano-tales/cifra-text-as-data/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/mancano-tales/cifra-text-as-data/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/mancano-tales/cifra-text-as-data/blob/main/validation.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/mancano-tales/cifra-text-as-data/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -369,8 +405,8 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Cifra</h1>
-<p class="subtitle lead">Codebook-driven text coding, validated against human coding</p>
+<h1 class="title">Why Validation Matters</h1>
+<p class="subtitle lead">Not a checklist item — the thing that separates data from a guess</p>
 </div>
 
 
@@ -387,44 +423,78 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="the-problem" class="level2">
-<h2 class="anchored" data-anchor-id="the-problem">The problem</h2>
-<p>Social scientists — political science, sociology, geography — routinely turn unstructured text into categorical data: is this news article describing a protest? does this public statement support or oppose a policy? Historically this is done by hand, with a research assistant reading each document and filling in a spreadsheet against a codebook the researcher wrote.</p>
-<p>LLMs can now automate a large share of that mechanical work. But every researcher who tries currently reinvents the same pipeline from scratch — and, more importantly, most skip the part that actually makes automated coding trustworthy: checking whether the model followed <em>this specific</em> codebook, or fell back on its own generic notion of the concept.</p>
+<section id="the-claim-and-why-it-needs-more-than-a-citation" class="level2">
+<h2 class="anchored" data-anchor-id="the-claim-and-why-it-needs-more-than-a-citation">The claim, and why it needs more than a citation</h2>
+<p><a href="https://arxiv.org/abs/2407.10747">Halterman &amp; Keith (2025)</a> and the same group’s 2026 follow-up argue that off-the-shelf LLMs frequently substitute their own generic notion of a concept for a codebook’s specific operationalization. Cifra’s design takes that seriously enough to build a whole screen around catching it — but a citation isn’t proof it applies to <em>this</em> pipeline. So it was tested for real, against real data, with the result kept regardless of which way it came out.</p>
 </section>
-<section id="what-cifra-is" class="level2">
-<h2 class="anchored" data-anchor-id="what-cifra-is">What Cifra is</h2>
-<p>Cifra is a local-first tool: the researcher authors a codebook (a concept, its categories, definitions, examples, boundary notes), points it at a text corpus, and the software calls an LLM to fill in a structured results table — one category, one rationale, one quoted evidence span per document. Every result carries a full audit trail: the exact prompt sent, the raw response received, which model and provider mode produced it.</p>
-<p>It is <strong>not</strong> a manual qualitative-coding tool — <a href="https://www.taguette.org/">Taguette</a>, <a href="https://github.com/ccbogel/QualCoder">QualCoder</a>, and <a href="https://github.com/luizpf42/QualiLab">QualiLab</a> already do that well. Cifra is closer to the inverse: it automates the mechanical categorization step so a human doesn’t have to read every row, while treating the researcher’s judgment — codebook design, model/parameter choices, and the decision of whether automated output is reliable enough to become research data — as non-negotiable and non-automatable.</p>
+<section id="the-test-a-real-bayesian-process-tracing-pilot" class="level2">
+<h2 class="anchored" data-anchor-id="the-test-a-real-bayesian-process-tracing-pilot">The test: a real Bayesian process-tracing pilot</h2>
+<p>The pilot corpus is a Bayesian abductive process-tracing evidence database (Fairfield &amp; Charman 2022) built for a separate MA thesis on Brazilian tertiary-education politics: pairs of rival hypotheses (e.g.&nbsp;<em>“expansion tracks partisan turnover”</em> vs.&nbsp;<em>“de-commodification is the real redistributive mechanism”</em>), each evaluated against real news evidence on a seven-level verbal probability scale.</p>
+<p>Sixteen real evidence/hypothesis-pair evaluations were run through Cifra’s actual extraction engine — not a mocked call, not a description of what the model would probably say — using a codebook that named each hypothesis and its scale, but nothing more:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">description</span><span class="kw">: </span><span class="ch">&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  Inhabit the world of the hypothesis 'Ideological Preference for Private</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  Provision'... The competing hypothesis in this pair is 'Path Dependence</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  and Fiscal Constraint' -- do not evaluate that one here.</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">categories</span><span class="kw">:</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">label</span><span class="kw">:</span><span class="at"> quase_certa</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">definition</span><span class="kw">:</span><span class="at"> </span><span class="st">"Quase certamente observaríamos esta evidência... (~0.95)."</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">  # ... six more labels, no further guidance</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
-<section id="what-automated-does-not-mean" class="level2">
-<h2 class="anchored" data-anchor-id="what-automated-does-not-mean">What “automated” does not mean</h2>
-<p>Automation applies to one step: turning text into a category without a human reading every row. It does not remove the researcher from anything else. The researcher is still solely responsible for:</p>
-<ul>
-<li><strong>designing the codebook</strong> — which categories exist, how each is defined, where the conceptual boundaries sit;</li>
-<li><strong>choosing the pipeline</strong> — which corpus, which model, which provider;</li>
-<li><strong>interpreting results</strong>; and</li>
-<li><strong>deciding, via validation, whether automated coding is reliable enough to use as data.</strong></li>
-</ul>
-<p>The Codebook Editor is the most important screen in the software, not a form to get through before “the real part.”</p>
+<section id="what-went-wrong" class="level2">
+<h2 class="anchored" data-anchor-id="what-went-wrong">What went wrong</h2>
+<p>Three concrete, checkable failure modes, not a vague “sometimes wrong”:</p>
+<ol type="1">
+<li><strong>No discriminating power.</strong> In 6 of 16 evaluations, <em>both</em> competing hypotheses in a pair scored <code>muito_provavel</code> (highly expected) — a likelihood ratio of roughly 1, which by construction can’t discriminate between rival explanations. 66% of all outputs landed on <code>muito_provavel</code> specifically, a strong bias toward affirming relevance rather than weighing it against the alternative.</li>
+<li><strong>A hypothesis’s own scope condition, ignored.</strong> One hypothesis specifically theorized <em>right-wing, market-aligned governments</em> promoting private provision. Real evidence about a 2004 policy from a left-wing government scored <code>muito_provavel</code> anyway — the model matched the general topic (government incentivizing private education) without checking whether the specific actor matched what the hypothesis required.</li>
+<li><strong>Inconsistent treatment of near-identical evidence.</strong> Three separate pieces of evidence, all showing the same student-financing program being tightened, were scored in contradictory directions with no stated rule distinguishing them.</li>
+</ol>
 </section>
-<section id="why-validation-is-not-a-footnote" class="level2">
-<h2 class="anchored" data-anchor-id="why-validation-is-not-a-footnote">Why validation is not a footnote</h2>
-<p><a href="https://arxiv.org/abs/2407.10747">Halterman &amp; Keith (2025)</a> — and the same group’s 2026 follow-up — show that off-the-shelf LLMs frequently ignore a codebook’s specific operationalization and substitute their own generic notion of a concept instead: including a labor strike under “protest” even when the codebook explicitly excludes it, for example. A model that looks fluent is not the same as a model that followed the instructions.</p>
-<p>Cifra ran this failure mode for real, not hypothetically. See <a href="./validation.html">Why Validation Matters</a> for the numbers: an under-specified codebook produced results with essentially zero discriminating power on a third of a real test batch, and a hypothesis’s own scope condition got silently ignored. Enriching the codebook — not switching models — fixed both, and the before/after is verifiable, not just asserted.</p>
+<section id="the-fix-and-the-proof-it-worked" class="level2">
+<h2 class="anchored" data-anchor-id="the-fix-and-the-proof-it-worked">The fix, and the proof it worked</h2>
+<p>The codebook — not the model — changed: the full mechanism and premises for each hypothesis (not just its name), the rival hypothesis stated explicitly as the counterfactual, and three added instructions — a scope check, an explicit discriminating-power question (“would a reasonable observer expect this same evidence equally well under the rival hypothesis?”), and a consistency rule for evidence showing policy change.</p>
+<p>The <em>identical</em> 16 evaluations were re-run through the <em>identical</em> model and provider, nothing else changed:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>Before</th>
+<th>After</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Non-discriminating evaluations (both sides scored high)</td>
+<td>6 / 16</td>
+<td><strong>0 / 16</strong></td>
+</tr>
+<tr class="even">
+<td>Share of outputs scoring <code>muito_provavel</code></td>
+<td>66%</td>
+<td>28%</td>
+</tr>
+<tr class="odd">
+<td>The scope-condition case (left-wing government vs.&nbsp;a right-wing-specific hypothesis)</td>
+<td><code>muito_provavel</code> (wrong)</td>
+<td><code>quase_impossivel</code>, with the model’s own justification naming the governing party and calling it a “hoop test failure”</td>
+</tr>
+</tbody>
+</table>
+<p>Same model. Same provider. Only the prompt changed. This is the concrete, falsifiable version of Cifra’s own thesis: an LLM coding failure is, first and most often, a codebook-specification problem — not a reason to swap models.</p>
 </section>
-<section id="current-status" class="level2">
-<h2 class="anchored" data-anchor-id="current-status">Current status</h2>
-<p>Cifra is pre-1.0, under active development. As of this page:</p>
-<ul>
-<li><strong>Corpus import</strong> — CSV/XLSX/pasted text, with column mapping.</li>
-<li><strong>Codebook editor</strong> — structured form with a live YAML preview.</li>
-<li><strong>Runs</strong> — kick off an extraction against a corpus + codebook, watch it progress, pick API-key mode (schema enforced via <a href="https://github.com/jxnl/instructor"><code>instructor</code></a>) or CLI mode (any installed CLI the researcher already has a subscription for).</li>
-<li><strong>Results</strong> — browsable table, inline edits, CSV/XLSX/JSON export, and a per-run <a href="https://llm-checklist.com/">GUIDE-LLM</a>-shaped AI-use disclosure report.</li>
-<li><strong>Validation</strong> — gold-label import (including round-tripping with QualiLab), Cohen’s kappa, precision/recall/F1 per category.</li>
-</ul>
-<p>See <a href="./how-it-works.html">How It Works</a> for the pipeline end to end, and <a href="./architecture.html">Architecture</a> for the technical design and why it looks the way it does.</p>
-<p>Source, issues, and full history: <a href="https://github.com/mancano-tales/cifra-text-as-data">github.com/mancano-tales/cifra-text-as-data</a>.</p>
+<section id="a-second-uncomfortable-finding-single-run-variance" class="level2">
+<h2 class="anchored" data-anchor-id="a-second-uncomfortable-finding-single-run-variance">A second, uncomfortable finding: single-run variance</h2>
+<p>The same 16 evaluations, run twice through the <em>same, already-enriched</em> codebook with nothing changed between runs, agreed exactly on only 21 of 32 (66%) decisions. Nine of the eleven disagreements were one step apart on the seven-point scale; one was a real reversal. Reading both justifications for that reversal side by side showed two independently well-reasoned readings of genuinely ambiguous evidence — not the model being incoherent.</p>
+<p>The practical conclusion: even a well-specified codebook does not make a single LLM run definitive. Cifra’s validation screen exists to compare output against human gold labels — this finding is why running a category more than once, or otherwise surfacing sampling variance, matters too, not just codebook quality.</p>
+</section>
+<section id="what-this-means-for-using-cifra" class="level2">
+<h2 class="anchored" data-anchor-id="what-this-means-for-using-cifra">What this means for using Cifra</h2>
+<p>Treat every automated result as provisional until it has been checked against a human-coded sample for that specific codebook. A tight, richly specified codebook is the single highest-leverage thing a researcher controls before that check — worth the time it takes to write boundary notes and examples, not a formality to skip past. The Validation screen (Cohen’s kappa, per-category precision/recall/F1, and a disagreement list for manual reading) is what turns that check into a number, not a feeling.</p>
+<p>Full methodology, including the verification procedure used to prove none of the numbers above were reconstructed after the fact, is in the <a href="https://github.com/mancano-tales/cifra-text-as-data/blob/main/docs/research/2026-09-02_llm_pipeline_verification_methodology.md">repository’s research notes</a>.</p>
 
 
 </section>
@@ -852,11 +922,11 @@ ul.task-list li input[type="checkbox"] {
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
+      <a href="./architecture.html" class="pagination-link" aria-label="Architecture">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Architecture</span>
+      </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./how-it-works.html" class="pagination-link" aria-label="How It Works">
-        <span class="nav-page-text">How It Works</span> <i class="bi bi-arrow-right-short"></i>
-      </a>
   </div>
 </nav>
 </div> <!-- /content -->
@@ -867,7 +937,7 @@ ul.task-list li input[type="checkbox"] {
 </div>   
     <div class="nav-footer-center">
 <p>Built with <a href="https://quarto.org">Quarto</a></p>
-<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/mancano-tales/cifra-text-as-data/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/mancano-tales/cifra-text-as-data/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/mancano-tales/cifra-text-as-data/blob/main/validation.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/mancano-tales/cifra-text-as-data/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
       <ul class="footer-items list-unstyled">
     <li class="nav-item compact">

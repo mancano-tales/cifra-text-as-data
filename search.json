@@ -1,0 +1,293 @@
+[
+  {
+    "objectID": "validation.html",
+    "href": "validation.html",
+    "title": "Why Validation Matters",
+    "section": "",
+    "text": "Halterman & Keith (2025) and the same group’s 2026 follow-up argue that off-the-shelf LLMs frequently substitute their own generic notion of a concept for a codebook’s specific operationalization. Cifra’s design takes that seriously enough to build a whole screen around catching it — but a citation isn’t proof it applies to this pipeline. So it was tested for real, against real data, with the result kept regardless of which way it came out.",
+    "crumbs": [
+      "Overview",
+      "Why Validation Matters"
+    ]
+  },
+  {
+    "objectID": "validation.html#the-claim-and-why-it-needs-more-than-a-citation",
+    "href": "validation.html#the-claim-and-why-it-needs-more-than-a-citation",
+    "title": "Why Validation Matters",
+    "section": "",
+    "text": "Halterman & Keith (2025) and the same group’s 2026 follow-up argue that off-the-shelf LLMs frequently substitute their own generic notion of a concept for a codebook’s specific operationalization. Cifra’s design takes that seriously enough to build a whole screen around catching it — but a citation isn’t proof it applies to this pipeline. So it was tested for real, against real data, with the result kept regardless of which way it came out.",
+    "crumbs": [
+      "Overview",
+      "Why Validation Matters"
+    ]
+  },
+  {
+    "objectID": "validation.html#the-test-a-real-bayesian-process-tracing-pilot",
+    "href": "validation.html#the-test-a-real-bayesian-process-tracing-pilot",
+    "title": "Why Validation Matters",
+    "section": "The test: a real Bayesian process-tracing pilot",
+    "text": "The test: a real Bayesian process-tracing pilot\nThe pilot corpus is a Bayesian abductive process-tracing evidence database (Fairfield & Charman 2022) built for a separate MA thesis on Brazilian tertiary-education politics: pairs of rival hypotheses (e.g. “expansion tracks partisan turnover” vs. “de-commodification is the real redistributive mechanism”), each evaluated against real news evidence on a seven-level verbal probability scale.\nSixteen real evidence/hypothesis-pair evaluations were run through Cifra’s actual extraction engine — not a mocked call, not a description of what the model would probably say — using a codebook that named each hypothesis and its scale, but nothing more:\ndescription: &gt;\n  Inhabit the world of the hypothesis 'Ideological Preference for Private\n  Provision'... The competing hypothesis in this pair is 'Path Dependence\n  and Fiscal Constraint' -- do not evaluate that one here.\ncategories:\n  - label: quase_certa\n    definition: \"Quase certamente observaríamos esta evidência... (~0.95).\"\n  # ... six more labels, no further guidance",
+    "crumbs": [
+      "Overview",
+      "Why Validation Matters"
+    ]
+  },
+  {
+    "objectID": "validation.html#what-went-wrong",
+    "href": "validation.html#what-went-wrong",
+    "title": "Why Validation Matters",
+    "section": "What went wrong",
+    "text": "What went wrong\nThree concrete, checkable failure modes, not a vague “sometimes wrong”:\n\nNo discriminating power. In 6 of 16 evaluations, both competing hypotheses in a pair scored muito_provavel (highly expected) — a likelihood ratio of roughly 1, which by construction can’t discriminate between rival explanations. 66% of all outputs landed on muito_provavel specifically, a strong bias toward affirming relevance rather than weighing it against the alternative.\nA hypothesis’s own scope condition, ignored. One hypothesis specifically theorized right-wing, market-aligned governments promoting private provision. Real evidence about a 2004 policy from a left-wing government scored muito_provavel anyway — the model matched the general topic (government incentivizing private education) without checking whether the specific actor matched what the hypothesis required.\nInconsistent treatment of near-identical evidence. Three separate pieces of evidence, all showing the same student-financing program being tightened, were scored in contradictory directions with no stated rule distinguishing them.",
+    "crumbs": [
+      "Overview",
+      "Why Validation Matters"
+    ]
+  },
+  {
+    "objectID": "validation.html#the-fix-and-the-proof-it-worked",
+    "href": "validation.html#the-fix-and-the-proof-it-worked",
+    "title": "Why Validation Matters",
+    "section": "The fix, and the proof it worked",
+    "text": "The fix, and the proof it worked\nThe codebook — not the model — changed: the full mechanism and premises for each hypothesis (not just its name), the rival hypothesis stated explicitly as the counterfactual, and three added instructions — a scope check, an explicit discriminating-power question (“would a reasonable observer expect this same evidence equally well under the rival hypothesis?”), and a consistency rule for evidence showing policy change.\nThe identical 16 evaluations were re-run through the identical model and provider, nothing else changed:\n\n\n\n\n\n\n\n\n\nBefore\nAfter\n\n\n\n\nNon-discriminating evaluations (both sides scored high)\n6 / 16\n0 / 16\n\n\nShare of outputs scoring muito_provavel\n66%\n28%\n\n\nThe scope-condition case (left-wing government vs. a right-wing-specific hypothesis)\nmuito_provavel (wrong)\nquase_impossivel, with the model’s own justification naming the governing party and calling it a “hoop test failure”\n\n\n\nSame model. Same provider. Only the prompt changed. This is the concrete, falsifiable version of Cifra’s own thesis: an LLM coding failure is, first and most often, a codebook-specification problem — not a reason to swap models.",
+    "crumbs": [
+      "Overview",
+      "Why Validation Matters"
+    ]
+  },
+  {
+    "objectID": "validation.html#a-second-uncomfortable-finding-single-run-variance",
+    "href": "validation.html#a-second-uncomfortable-finding-single-run-variance",
+    "title": "Why Validation Matters",
+    "section": "A second, uncomfortable finding: single-run variance",
+    "text": "A second, uncomfortable finding: single-run variance\nThe same 16 evaluations, run twice through the same, already-enriched codebook with nothing changed between runs, agreed exactly on only 21 of 32 (66%) decisions. Nine of the eleven disagreements were one step apart on the seven-point scale; one was a real reversal. Reading both justifications for that reversal side by side showed two independently well-reasoned readings of genuinely ambiguous evidence — not the model being incoherent.\nThe practical conclusion: even a well-specified codebook does not make a single LLM run definitive. Cifra’s validation screen exists to compare output against human gold labels — this finding is why running a category more than once, or otherwise surfacing sampling variance, matters too, not just codebook quality.",
+    "crumbs": [
+      "Overview",
+      "Why Validation Matters"
+    ]
+  },
+  {
+    "objectID": "validation.html#what-this-means-for-using-cifra",
+    "href": "validation.html#what-this-means-for-using-cifra",
+    "title": "Why Validation Matters",
+    "section": "What this means for using Cifra",
+    "text": "What this means for using Cifra\nTreat every automated result as provisional until it has been checked against a human-coded sample for that specific codebook. A tight, richly specified codebook is the single highest-leverage thing a researcher controls before that check — worth the time it takes to write boundary notes and examples, not a formality to skip past. The Validation screen (Cohen’s kappa, per-category precision/recall/F1, and a disagreement list for manual reading) is what turns that check into a number, not a feeling.\nFull methodology, including the verification procedure used to prove none of the numbers above were reconstructed after the fact, is in the repository’s research notes.",
+    "crumbs": [
+      "Overview",
+      "Why Validation Matters"
+    ]
+  },
+  {
+    "objectID": "how-it-works.html",
+    "href": "how-it-works.html",
+    "title": "How It Works",
+    "section": "",
+    "text": "A codebook is a concept operationalized as categories. It is authored as YAML — editable in the Codebook Editor’s structured form, or by hand — with this shape, based on Halterman & Keith’s “Stage 0: Codebook Preparation”:\nconcept: protest\ndescription: &gt;\n  A collective, public event expressing a political or social claim,\n  involving at least two people.\ncategories:\n  - label: protest\n    definition: &gt;\n      An occupation, march, or strike with a declared political demand, or\n      a road blockade with a stated claim.\n    positive_examples:\n      - \"About 200 people occupied the square in front of city hall...\"\n    negative_examples:\n      - \"People gathered for a cultural event with no political claim\"\n    boundary_notes: &gt;\n      Does not include purely ceremonial/commemorative events with no\n      claim being made. A labor strike with no political demand is a\n      boundary case — decide explicitly whether to include or exclude it.\n  - label: not_protest\n    definition: \"Any event that does not meet the criteria above.\"\nconcept, description, and each category’s label/definition are required; positive_examples, negative_examples, and boundary_notes are optional but strongly recommended — see Why Validation Matters for a real before/after showing how much a well-specified boundary_notes and description change model behavior on the same evidence.",
+    "crumbs": [
+      "Overview",
+      "How It Works"
+    ]
+  },
+  {
+    "objectID": "how-it-works.html#the-codebook",
+    "href": "how-it-works.html#the-codebook",
+    "title": "How It Works",
+    "section": "",
+    "text": "A codebook is a concept operationalized as categories. It is authored as YAML — editable in the Codebook Editor’s structured form, or by hand — with this shape, based on Halterman & Keith’s “Stage 0: Codebook Preparation”:\nconcept: protest\ndescription: &gt;\n  A collective, public event expressing a political or social claim,\n  involving at least two people.\ncategories:\n  - label: protest\n    definition: &gt;\n      An occupation, march, or strike with a declared political demand, or\n      a road blockade with a stated claim.\n    positive_examples:\n      - \"About 200 people occupied the square in front of city hall...\"\n    negative_examples:\n      - \"People gathered for a cultural event with no political claim\"\n    boundary_notes: &gt;\n      Does not include purely ceremonial/commemorative events with no\n      claim being made. A labor strike with no political demand is a\n      boundary case — decide explicitly whether to include or exclude it.\n  - label: not_protest\n    definition: \"Any event that does not meet the criteria above.\"\nconcept, description, and each category’s label/definition are required; positive_examples, negative_examples, and boundary_notes are optional but strongly recommended — see Why Validation Matters for a real before/after showing how much a well-specified boundary_notes and description change model behavior on the same evidence.",
+    "crumbs": [
+      "Overview",
+      "How It Works"
+    ]
+  },
+  {
+    "objectID": "how-it-works.html#deriving-the-output-schema",
+    "href": "how-it-works.html#deriving-the-output-schema",
+    "title": "How It Works",
+    "section": "2. Deriving the output schema",
+    "text": "2. Deriving the output schema\nThe codebook’s category labels become a Pydantic Literal enum at run time — the model’s categoria field can only ever be one of the labels the codebook actually defines, never an invented one. Two more fields are fixed across every codebook by contract: justificativa (free-text rationale) and trecho_evidencia (a verbatim quote from the document grounding the decision) — this is what makes a result auditable rather than a bare label.",
+    "crumbs": [
+      "Overview",
+      "How It Works"
+    ]
+  },
+  {
+    "objectID": "how-it-works.html#building-the-prompt",
+    "href": "how-it-works.html#building-the-prompt",
+    "title": "How It Works",
+    "section": "3. Building the prompt",
+    "text": "3. Building the prompt\nEvery request sent to the model is built from the same fixed shape:\nYou are a careful annotator applying a fixed coding scheme. Follow the\ninstructions below exactly as written, even when a case looks similar to\na more common or generic concept. Do not substitute your own default\ndefinition for the one given.\n\nConcept: &lt;concept&gt;\n&lt;description&gt;\n\nCategories:\n- &lt;label&gt;: &lt;definition&gt;\n  Positive example: \"...\"\n  Negative example: \"...\"\n  Boundary notes: ...\n[... one block per category ...]\nfollowed by the document’s own text, and — for CLI-mode providers — a final block asking for a single JSON object matching the schema. Nothing here is hidden: Codebook.build_messages() builds exactly this from the stored codebook, so it can be reconstructed and verified from the codebook record alone.",
+    "crumbs": [
+      "Overview",
+      "How It Works"
+    ]
+  },
+  {
+    "objectID": "how-it-works.html#calling-the-model-two-provider-modes-one-interface",
+    "href": "how-it-works.html#calling-the-model-two-provider-modes-one-interface",
+    "title": "How It Works",
+    "section": "4. Calling the model — two provider modes, one interface",
+    "text": "4. Calling the model — two provider modes, one interface\nCifra’s provider layer is deliberately agent-agnostic. Both modes implement the same Provider.extract(messages, schema) interface, so the extraction engine never has to know which one is active:\nAPI-key mode — a direct key (Anthropic or OpenAI) via instructor. Schema is enforced at the API level through function/tool calling: the provider cannot return a response that fails to validate. This is the reliable path for a real coding run.\nCLI mode — shells out to an already-installed CLI the researcher has a subscription for (Claude Code, a Codex-style CLI, or any command that takes a prompt and returns text). No API-level schema enforcement exists here — the schema is requested in the prompt text, and the response is scanned for the first JSON object that actually validates against it, with up to three retries on malformed output. This is explicitly best-effort: the trade-off for not needing a separately billed API key.",
+    "crumbs": [
+      "Overview",
+      "How It Works"
+    ]
+  },
+  {
+    "objectID": "how-it-works.html#running-extraction",
+    "href": "how-it-works.html#running-extraction",
+    "title": "How It Works",
+    "section": "5. Running extraction",
+    "text": "5. Running extraction\nA run pairs one codebook with one corpus. For each document:\n\nCheck for a cached extraction — same document, same codebook, same model. If found, reuse it; no repeat API call, no repeat cost.\nOtherwise call the provider (with retry on transient failures).\nPersist the result: categoria, justificativa, trecho_evidencia, plus the full audit trail (prompt_sent, raw_response) — the literal prompt and the model’s raw answer, not a reconstruction after the fact.\nA single document’s failure is recorded as an error row (categoria = \"__error__\"), not a crash of the whole run.\n\nThis runs as a background task — a researcher can close the tab and the run keeps going, then browse a live-updating progress bar and results table when they come back.",
+    "crumbs": [
+      "Overview",
+      "How It Works"
+    ]
+  },
+  {
+    "objectID": "how-it-works.html#results-export-and-disclosure",
+    "href": "how-it-works.html#results-export-and-disclosure",
+    "title": "How It Works",
+    "section": "6. Results, export, and disclosure",
+    "text": "6. Results, export, and disclosure\nResults are browsable and editable in place — an edit is validated against the run’s own codebook labels, so it’s impossible to hand-correct a row into a category the codebook doesn’t define. Export to CSV, XLSX, or JSON carries every field, audit trail included, since the export endpoint reuses the same row-building logic as the results view — there is no separate, narrower export path that drops fields silently.\nEach run can also generate a GUIDE-LLM-shaped AI-use disclosure report: model, provider mode, access mode, the exact prompt per document, whether output has been validated against human labels yet, and reproducibility pointers (codebook id, run id, the git commit that produced it) — answering the actual consensus checklist for reporting LLM use in behavioral/social science research, not a generic AI-use paragraph.",
+    "crumbs": [
+      "Overview",
+      "How It Works"
+    ]
+  },
+  {
+    "objectID": "how-it-works.html#validation",
+    "href": "how-it-works.html#validation",
+    "title": "How It Works",
+    "section": "7. Validation",
+    "text": "7. Validation\nOnce a subset of documents has human-coded gold labels — either imported directly as a plain CSV, or round-tripped from a QualiLab manual-coding project — Cifra computes accuracy, Cohen’s kappa, and per-category precision/recall/F1 against a run’s output, and surfaces the disagreements for manual reading. See Why Validation Matters for why this step exists at all and what it caught in practice.",
+    "crumbs": [
+      "Overview",
+      "How It Works"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Cifra",
+    "section": "",
+    "text": "Social scientists — political science, sociology, geography — routinely turn unstructured text into categorical data: is this news article describing a protest? does this public statement support or oppose a policy? Historically this is done by hand, with a research assistant reading each document and filling in a spreadsheet against a codebook the researcher wrote.\nLLMs can now automate a large share of that mechanical work. But every researcher who tries currently reinvents the same pipeline from scratch — and, more importantly, most skip the part that actually makes automated coding trustworthy: checking whether the model followed this specific codebook, or fell back on its own generic notion of the concept.",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "index.html#the-problem",
+    "href": "index.html#the-problem",
+    "title": "Cifra",
+    "section": "",
+    "text": "Social scientists — political science, sociology, geography — routinely turn unstructured text into categorical data: is this news article describing a protest? does this public statement support or oppose a policy? Historically this is done by hand, with a research assistant reading each document and filling in a spreadsheet against a codebook the researcher wrote.\nLLMs can now automate a large share of that mechanical work. But every researcher who tries currently reinvents the same pipeline from scratch — and, more importantly, most skip the part that actually makes automated coding trustworthy: checking whether the model followed this specific codebook, or fell back on its own generic notion of the concept.",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "index.html#what-cifra-is",
+    "href": "index.html#what-cifra-is",
+    "title": "Cifra",
+    "section": "What Cifra is",
+    "text": "What Cifra is\nCifra is a local-first tool: the researcher authors a codebook (a concept, its categories, definitions, examples, boundary notes), points it at a text corpus, and the software calls an LLM to fill in a structured results table — one category, one rationale, one quoted evidence span per document. Every result carries a full audit trail: the exact prompt sent, the raw response received, which model and provider mode produced it.\nIt is not a manual qualitative-coding tool — Taguette, QualCoder, and QualiLab already do that well. Cifra is closer to the inverse: it automates the mechanical categorization step so a human doesn’t have to read every row, while treating the researcher’s judgment — codebook design, model/parameter choices, and the decision of whether automated output is reliable enough to become research data — as non-negotiable and non-automatable.",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "index.html#what-automated-does-not-mean",
+    "href": "index.html#what-automated-does-not-mean",
+    "title": "Cifra",
+    "section": "What “automated” does not mean",
+    "text": "What “automated” does not mean\nAutomation applies to one step: turning text into a category without a human reading every row. It does not remove the researcher from anything else. The researcher is still solely responsible for:\n\ndesigning the codebook — which categories exist, how each is defined, where the conceptual boundaries sit;\nchoosing the pipeline — which corpus, which model, which provider;\ninterpreting results; and\ndeciding, via validation, whether automated coding is reliable enough to use as data.\n\nThe Codebook Editor is the most important screen in the software, not a form to get through before “the real part.”",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "index.html#why-validation-is-not-a-footnote",
+    "href": "index.html#why-validation-is-not-a-footnote",
+    "title": "Cifra",
+    "section": "Why validation is not a footnote",
+    "text": "Why validation is not a footnote\nHalterman & Keith (2025) — and the same group’s 2026 follow-up — show that off-the-shelf LLMs frequently ignore a codebook’s specific operationalization and substitute their own generic notion of a concept instead: including a labor strike under “protest” even when the codebook explicitly excludes it, for example. A model that looks fluent is not the same as a model that followed the instructions.\nCifra ran this failure mode for real, not hypothetically. See Why Validation Matters for the numbers: an under-specified codebook produced results with essentially zero discriminating power on a third of a real test batch, and a hypothesis’s own scope condition got silently ignored. Enriching the codebook — not switching models — fixed both, and the before/after is verifiable, not just asserted.",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "index.html#current-status",
+    "href": "index.html#current-status",
+    "title": "Cifra",
+    "section": "Current status",
+    "text": "Current status\nCifra is pre-1.0, under active development. As of this page:\n\nCorpus import — CSV/XLSX/pasted text, with column mapping.\nCodebook editor — structured form with a live YAML preview.\nRuns — kick off an extraction against a corpus + codebook, watch it progress, pick API-key mode (schema enforced via instructor) or CLI mode (any installed CLI the researcher already has a subscription for).\nResults — browsable table, inline edits, CSV/XLSX/JSON export, and a per-run GUIDE-LLM-shaped AI-use disclosure report.\nValidation — gold-label import (including round-tripping with QualiLab), Cohen’s kappa, precision/recall/F1 per category.\n\nSee How It Works for the pipeline end to end, and Architecture for the technical design and why it looks the way it does.\nSource, issues, and full history: github.com/mancano-tales/cifra-text-as-data.",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "architecture.html",
+    "href": "architecture.html",
+    "title": "Architecture",
+    "section": "",
+    "text": "Backend: Python + FastAPI, running locally via uvicorn. Responsible for LLM calls, a background job queue (nothing heavier than a Python background task in the MVP — no Redis/Celery), and a SQLite database (via SQLModel) holding codebooks, corpora, runs, and results.\nFrontend: a Vite + React + TypeScript single-page app talking to the backend over fetch. Bilingual (PT-BR/EN) via react-i18next.\nLocal execution: the backend comes up on a local port and responds via curl with no frontend open at all — this is a deliberate acceptance criterion, checked repeatedly during development, not an implementation detail. If the backend ever needed the frontend to function, that would be a sign of improper coupling to fix, not a shortcut to take.",
+    "crumbs": [
+      "Overview",
+      "Architecture"
+    ]
+  },
+  {
+    "objectID": "architecture.html#stack",
+    "href": "architecture.html#stack",
+    "title": "Architecture",
+    "section": "",
+    "text": "Backend: Python + FastAPI, running locally via uvicorn. Responsible for LLM calls, a background job queue (nothing heavier than a Python background task in the MVP — no Redis/Celery), and a SQLite database (via SQLModel) holding codebooks, corpora, runs, and results.\nFrontend: a Vite + React + TypeScript single-page app talking to the backend over fetch. Bilingual (PT-BR/EN) via react-i18next.\nLocal execution: the backend comes up on a local port and responds via curl with no frontend open at all — this is a deliberate acceptance criterion, checked repeatedly during development, not an implementation detail. If the backend ever needed the frontend to function, that would be a sign of improper coupling to fix, not a shortcut to take.",
+    "crumbs": [
+      "Overview",
+      "Architecture"
+    ]
+  },
+  {
+    "objectID": "architecture.html#why-not-a-single-file-browser-tool-like-qualilab",
+    "href": "architecture.html#why-not-a-single-file-browser-tool-like-qualilab",
+    "title": "Architecture",
+    "section": "Why not a single-file browser tool like QualiLab",
+    "text": "Why not a single-file browser tool like QualiLab\nThe honest version of this comparison, corrected after actually reading QualiLab’s source rather than assuming: QualiLab is not purely manual — it has five LLM-backed “Auto-coding” assistants and a blind-evaluation feature conceptually close to a validation step. The real difference is architectural, not manual-vs-automated:\n\nScale ceiling: QualiLab caps a single send at roughly 600,000 characters total, with documents beyond that dropped entirely. Cifra needs to run hundreds or thousands of LLM calls over a full corpus with no such ceiling.\nExecution model: QualiLab’s AI calls are synchronous within the open browser tab, with no persistent job queue and no resumable run if the tab closes — a direct consequence of its deliberate single-file, no-server-of-its-own design. Cifra’s batched calls need retry, caching, and cost tracking, and must survive closing the tab; that calls for a real backend process.\nCredential handling: routing an API key through browser JavaScript alone is uncomfortable and unsafe for a tool meant to run large, billed batches. A local backend keeps the key server-side, never shipped to the page.\n\nThis is not a reason to ignore QualiLab — it’s the reason Cifra treats interoperability with it as a real priority (round-tripping corpora and gold labels) rather than duplicating its mature manual-review UI from scratch. See the codebook/data model below for where that interop lands.",
+    "crumbs": [
+      "Overview",
+      "Architecture"
+    ]
+  },
+  {
+    "objectID": "architecture.html#provider-layer-agent-agnostic-by-design",
+    "href": "architecture.html#provider-layer-agent-agnostic-by-design",
+    "title": "Architecture",
+    "section": "Provider layer — agent-agnostic by design",
+    "text": "Provider layer — agent-agnostic by design\nTwo credential modes behind one interface (Provider.extract), so the extraction engine never branches on which is active:\n\nCLI mode — shells out to an installed CLI the researcher already pays for (Claude Code, Codex, or a generic command adapter). Best-effort only: no schema-enforcement mechanism equivalent to function-calling, so a higher error rate is the accepted trade-off for not requiring a separately billed API key.\nAPI-key mode — a direct key via instructor, the reliable, guaranteed-schema path for real, large coding runs.",
+    "crumbs": [
+      "Overview",
+      "Architecture"
+    ]
+  },
+  {
+    "objectID": "architecture.html#data-model-sqlite-high-level",
+    "href": "architecture.html#data-model-sqlite-high-level",
+    "title": "Architecture",
+    "section": "Data model (SQLite, high level)",
+    "text": "Data model (SQLite, high level)\n\ncodebooks — id, name, the codebook’s own YAML, created_at.\ndocuments — id, corpus_id, text, metadata.\nruns — id, codebook_id, corpus_id, model, provider_mode, provider_detail, status, created_at.\nextractions — id, run_id, document_id, categoria, justificativa, trecho_evidencia, prompt_sent, raw_response (the audit trail — see How It Works).\nhuman_labels — id, document_id, codebook_id, categoria, coder, source, layer — designed to hold multiple gold-coding rows per document (distinguishing a plain-CSV import from a QualiLab round-trip, and a “final” reconciled layer from an in-progress one), not just one gold label per document.\n\nSchema changes to an already-running local database are applied additively at every startup (new columns get ALTER TABLE ADD COLUMN, existing data untouched) rather than requiring a manual fix to whatever .sqlite file happens to be live — a real bug hit twice during development before this was generalized.",
+    "crumbs": [
+      "Overview",
+      "Architecture"
+    ]
+  },
+  {
+    "objectID": "architecture.html#roadmap-desktop-packaging",
+    "href": "architecture.html#roadmap-desktop-packaging",
+    "title": "Architecture",
+    "section": "Roadmap: desktop packaging",
+    "text": "Roadmap: desktop packaging\nThe long-term goal is a packaged desktop app (Windows/Mac/Linux), not a script only the author knows how to run — but not by rewriting anything in Tauri/Electron-native code from day one. The plan:\n\nNow: standalone FastAPI backend, sidecar-ready from the first commit, all persistence local.\nLater, once the pipeline is validated with real use: compile the backend into a single binary (PyInstaller or Nuitka) and wrap it with Tauri (preferred over Electron — uses the system webview) as the desktop shell, auto-starting the binary as a sidecar. The LLM/ validation/cache logic is packaged, not rewritten — the same pattern today’s local-LLM desktop apps already use.\n\nRewriting the orchestration/retry/cache/kappa logic in Rust or TypeScript would cost real engineering for no benefit over Python’s mature LLM SDKs and scikit-learn — that route is only worth reconsidering if the Python sidecar itself proves genuinely problematic to distribute cross-platform in practice.",
+    "crumbs": [
+      "Overview",
+      "Architecture"
+    ]
+  }
+]
