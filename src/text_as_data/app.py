@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +12,7 @@ from .codebook import spec_from_yaml_string, spec_to_yaml_string
 from .corpus_import import parse_csv_rows, parse_xlsx_rows
 from .db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord, get_engine
 from .extraction import run_extraction
-from .providers import Provider, make_api_key_provider
+from .providers import CliProvider, Provider, make_api_key_provider
 
 app = FastAPI(title="Cifra backend (Slice 1)")
 
@@ -33,13 +34,27 @@ class CreateRunRequest(BaseModel):
     codebook_id: int
     corpus_id: str
     model: str
+    provider_mode: Literal["api_key", "cli"] = "api_key"
+    cli_command: list[str] | None = None
+    cli_prompt_mode: Literal["stdin", "arg"] = "stdin"
 
 
 def get_provider_dependency(request: CreateRunRequest) -> Provider:
-    """Built from the request's own `model`, not a hardcoded constant --
-    Slice 1 only supports the Anthropic API-key vendor, but the model
+    """Built from the request's own `model` (and, for CLI mode, its own
+    `cli_command`/`cli_prompt_mode`) -- not a hardcoded constant. The model
     actually invoked must match what's persisted on the `RunRecord` and
-    used as the cache key in `run_extraction`, or both become misleading."""
+    used as the cache key in `run_extraction`, or both become misleading.
+
+    CLI mode is the agent-agnostic path documented in AGENTS.md's provider
+    layer design: any already-installed CLI that accepts a prompt and
+    returns text works here, not just `claude -p` -- e.g. Google
+    Antigravity's `agy -p "<prompt>"`, which (unlike `claude -p`) requires
+    the prompt as a trailing argument rather than reading stdin, hence
+    `cli_prompt_mode`."""
+    if request.provider_mode == "cli":
+        if not request.cli_command:
+            raise HTTPException(status_code=422, detail="cli_command is required when provider_mode is 'cli'")
+        return CliProvider(command=request.cli_command, prompt_mode=request.cli_prompt_mode)
     return make_api_key_provider(vendor="anthropic", model=request.model)
 
 

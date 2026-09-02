@@ -61,23 +61,41 @@ class CliProvider(Provider):
     ApiKeyProvider; retry-on-malformed-output is the caller's job
     (extraction.py), not this class's."""
 
-    def __init__(self, command: list[str], runner=subprocess.run, timeout: int = 180):
+    def __init__(
+        self, command: list[str], runner=subprocess.run, timeout: int = 180, prompt_mode: str = "stdin"
+    ):
         resolved = shutil.which(command[0])
         if resolved is not None:
             command = [resolved, *command[1:]]
         self._command = command
         self._runner = runner
         self._timeout = timeout
+        if prompt_mode not in ("stdin", "arg"):
+            raise ValueError(f"prompt_mode must be 'stdin' or 'arg', got {prompt_mode!r}")
+        self._prompt_mode = prompt_mode
 
     def extract(self, messages: list[dict], schema: type[BaseModel]) -> BaseModel:
         prompt = self._build_prompt(messages, schema)
-        result = self._runner(
-            self._command,
-            input=prompt,
-            capture_output=True,
-            encoding="utf-8",
-            timeout=self._timeout,
-        )
+        if self._prompt_mode == "arg":
+            # Some CLIs (e.g. Google Antigravity's `agy -p "<prompt>"`) take
+            # the prompt as a trailing argument rather than reading stdin --
+            # `agy -p` with no argument errors "flag needs an argument"
+            # instead of blocking on stdin the way `claude -p` does.
+            result = self._runner(
+                [*self._command, prompt],
+                input=None,
+                capture_output=True,
+                encoding="utf-8",
+                timeout=self._timeout,
+            )
+        else:
+            result = self._runner(
+                self._command,
+                input=prompt,
+                capture_output=True,
+                encoding="utf-8",
+                timeout=self._timeout,
+            )
         if result.returncode != 0:
             raise RuntimeError(f"CLI command failed (exit {result.returncode}): {result.stderr}")
         json_str = self._extract_json(result.stdout, schema)

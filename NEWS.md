@@ -1,5 +1,23 @@
 # NEWS
 
+## 2026-09-01 (3)
+
+- `POST /runs` can now actually select CLI mode, not just API-key mode.
+  Slice 1's `CreateRunRequest`/`get_provider_dependency` only ever built an
+  `ApiKeyProvider(vendor="anthropic")` — the agent-agnostic CLI path was
+  real in `providers.py` (exercised once via an ad hoc worktree script for
+  Task 10's `claude -p` verification run) but never reachable through the
+  actual REST API. Added `provider_mode` ("api_key" | "cli"),
+  `cli_command`, and `cli_prompt_mode` to `CreateRunRequest`; `provider_mode
+  = "cli"` now builds a real `CliProvider` from the request's own command.
+  Also extended `CliProvider` itself with `prompt_mode="arg"`: Google
+  Antigravity's CLI (`agy -p "<prompt>"`) takes the prompt as a trailing
+  argument and errors "flag needs an argument" if none is given, unlike
+  `claude -p`, which blocks reading it from stdin — the existing
+  stdin-only design silently couldn't drive `agy` at all. 71/71 tests
+  pass (4 new: 2 for `CliProvider`'s new `prompt_mode`, 2 for
+  `get_provider_dependency`'s new CLI branch).
+
 ## 2026-09-01 (2)
 
 - Slice 2 shipped: the backend gets its first frontend. A new `frontend/`

@@ -177,6 +177,33 @@ def test_cli_provider_passes_utf8_encoding_to_runner():
     assert captured_kwargs["encoding"] == "utf-8"
 
 
+def test_cli_provider_passes_prompt_as_trailing_arg_when_configured(monkeypatch):
+    # `agy -p "<prompt>"` (Google Antigravity CLI) errors "flag needs an
+    # argument" if given no value and nothing on stdin -- unlike `claude
+    # -p`, which blocks reading the prompt from stdin. prompt_mode="arg"
+    # must append the prompt to the command list instead of piping it in.
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    captured = {}
+
+    def capturing_runner(command, input, capture_output, encoding, timeout):
+        captured["command"] = command
+        captured["input"] = input
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"categoria": "protest"}', stderr="")
+
+    provider = CliProvider(command=["agy", "-p"], runner=capturing_runner, prompt_mode="arg")
+    result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
+
+    assert result.categoria == "protest"
+    assert captured["command"][:2] == ["agy", "-p"]
+    assert captured["command"][2].startswith("x")
+    assert captured["input"] is None
+
+
+def test_cli_provider_rejects_unknown_prompt_mode():
+    with pytest.raises(ValueError, match="prompt_mode"):
+        CliProvider(command=["fake-cli"], runner=_fake_runner("{}"), prompt_mode="carrier-pigeon")
+
+
 def test_cli_provider_decodes_non_ascii_output_correctly():
     # End-to-end sanity check that non-ASCII text (e.g. Portuguese
     # accented characters from the V7 pilot corpus) survives the round

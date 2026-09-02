@@ -80,3 +80,36 @@ def test_get_provider_dependency_builds_provider_for_the_requested_model(monkeyp
     provider = get_provider_dependency(request)
 
     assert provider._model == "claude-haiku-4-5"
+
+
+def test_get_provider_dependency_builds_cli_provider_when_requested():
+    from text_as_data.app import CreateRunRequest, get_provider_dependency
+    from text_as_data.providers import CliProvider
+
+    request = CreateRunRequest(
+        codebook_id=1,
+        corpus_id="c",
+        model="gemini-agy",
+        provider_mode="cli",
+        cli_command=["agy", "-p"],
+        cli_prompt_mode="arg",
+    )
+
+    provider = get_provider_dependency(request)
+
+    assert isinstance(provider, CliProvider)
+    assert provider._prompt_mode == "arg"
+
+
+def test_get_provider_dependency_requires_cli_command_for_cli_mode():
+    from fastapi import HTTPException
+
+    from text_as_data.app import CreateRunRequest, get_provider_dependency
+
+    request = CreateRunRequest(codebook_id=1, corpus_id="c", model="x", provider_mode="cli")
+
+    try:
+        get_provider_dependency(request)
+        assert False, "expected HTTPException"
+    except HTTPException as exc:
+        assert exc.status_code == 422
