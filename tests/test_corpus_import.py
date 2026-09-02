@@ -2,6 +2,7 @@ import io
 
 import docx
 import openpyxl
+import pytest
 
 from text_as_data.corpus_import import (
     parse_csv_rows,
@@ -58,6 +59,20 @@ def test_parse_xlsx_rows_skips_blank_trailing_rows():
     rows = parse_xlsx_rows(content)
 
     assert len(rows) == 1
+
+
+def test_parse_xlsx_rows_rejects_a_completely_empty_workbook():
+    content = _make_xlsx_bytes([])
+
+    with pytest.raises(ValueError, match="no header row"):
+        parse_xlsx_rows(content)
+
+
+def test_parse_xlsx_rows_rejects_an_unnamed_header_column():
+    content = _make_xlsx_bytes([["title", None], ["A", "First doc"]])
+
+    with pytest.raises(ValueError, match="unnamed cells"):
+        parse_xlsx_rows(content)
 
 
 def test_parse_txt_bytes_decodes_utf8_with_bom():

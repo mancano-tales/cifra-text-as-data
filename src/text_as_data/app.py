@@ -45,7 +45,7 @@ app.add_middleware(
     # localhost/127.0.0.1 origin on any port is allowed instead; this is a
     # local dev backend, not a deployed one, so there's no production
     # origin to restrict against.
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1):\d+$",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -66,6 +66,29 @@ class CreateRunRequest(BaseModel):
     cli_prompt_mode: Literal["stdin", "arg"] = "stdin"
 
 
+_MODEL_PREFIX_TO_VENDOR = {
+    "claude": "anthropic",
+    "gpt": "openai",
+    "o1": "openai",
+    "o3": "openai",
+}
+
+
+def _vendor_for_model(model: str) -> str:
+    """Infer the `instructor` vendor from a model name's own prefix (e.g.
+    `claude-haiku-4-5` -> `anthropic`, `gpt-4o` -> `openai`) instead of a
+    hardcoded constant -- a request for a non-Anthropic model must not
+    silently be sent to the Anthropic API with an invalid model name."""
+    for prefix, vendor in _MODEL_PREFIX_TO_VENDOR.items():
+        if model.startswith(prefix):
+            return vendor
+    raise HTTPException(
+        status_code=422,
+        detail=f"could not infer an API vendor for model {model!r}; "
+        f"expected a model name starting with one of {sorted(_MODEL_PREFIX_TO_VENDOR)}",
+    )
+
+
 def get_provider_dependency(request: CreateRunRequest) -> Provider:
     """Built from the request's own `model` (and, for CLI mode, its own
     `cli_command`/`cli_prompt_mode`) -- not a hardcoded constant. The model
@@ -82,7 +105,7 @@ def get_provider_dependency(request: CreateRunRequest) -> Provider:
         if not request.cli_command:
             raise HTTPException(status_code=422, detail="cli_command is required when provider_mode is 'cli'")
         return CliProvider(command=request.cli_command, prompt_mode=request.cli_prompt_mode)
-    return make_api_key_provider(vendor="anthropic", model=request.model)
+    return make_api_key_provider(vendor=_vendor_for_model(request.model), model=request.model)
 
 
 @app.get("/runs")
@@ -124,6 +147,12 @@ def create_run(
         if codebook is None:
             raise HTTPException(status_code=404, detail=f"codebook {request.codebook_id} not found")
 
+        corpus_exists = session.exec(
+            select(DocumentRecord).where(DocumentRecord.corpus_id == request.corpus_id)
+        ).first()
+        if corpus_exists is None:
+            raise HTTPException(status_code=404, detail=f"corpus {request.corpus_id!r} not found")
+
         provider_detail = (
             " ".join(request.cli_command) if request.provider_mode == "cli" and request.cli_command else request.model
         )
@@ -161,18 +190,25 @@ def _extraction_with_snippet(session: Session, extraction: ExtractionRecord) -> 
     return {**extraction.model_dump(), "document_snippet": snippet}
 
 
+_SQLITE_MAX_IN_CLAUSE = 500
+
+
 def _extractions_with_snippets(session: Session, extractions: list[ExtractionRecord]) -> list[dict]:
     """Batch version of `_extraction_with_snippet` -- one query for every
     document a run's extractions reference, instead of one query per row.
     A single-row helper is fine for `update_extraction`, but the results
     and export endpoints list every row in a run, where a per-row lookup
-    turns into N+1 queries as a run grows."""
-    document_ids = {e.document_id for e in extractions}
-    documents = (
-        session.exec(select(DocumentRecord).where(DocumentRecord.id.in_(document_ids))).all()
-        if document_ids
-        else []
-    )
+    turns into N+1 queries as a run grows.
+
+    Chunked into batches of `_SQLITE_MAX_IN_CLAUSE` ids -- SQLite's default
+    build caps a statement at 999 bound parameters (SQLITE_MAX_VARIABLE_NUMBER),
+    so a single `IN (...)` over a run with more than ~999 distinct documents
+    would raise `sqlite3.OperationalError: too many SQL variables`."""
+    document_ids = list({e.document_id for e in extractions})
+    documents = []
+    for i in range(0, len(document_ids), _SQLITE_MAX_IN_CLAUSE):
+        chunk = document_ids[i : i + _SQLITE_MAX_IN_CLAUSE]
+        documents.extend(session.exec(select(DocumentRecord).where(DocumentRecord.id.in_(chunk))).all())
     snippets = {d.id: d.text[:160] for d in documents}
     return [{**e.model_dump(), "document_snippet": snippets.get(e.document_id, "")} for e in extractions]
 

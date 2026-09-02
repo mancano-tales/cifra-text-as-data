@@ -29,7 +29,21 @@ def parse_xlsx_rows(content: bytes) -> list[dict]:
     workbook = openpyxl.load_workbook(io.BytesIO(content), data_only=True, read_only=True)
     worksheet = workbook.active
     rows_iter = worksheet.iter_rows(values_only=True)
-    header = next(rows_iter)
+    try:
+        header = next(rows_iter)
+    except StopIteration:
+        # A blank/empty sheet has no header row at all -- without this,
+        # `next()` raises a bare `StopIteration` whose `str()` is empty,
+        # producing an uninformative "could not parse file as XLSX: " in
+        # the app.py caller's HTTPException detail.
+        raise ValueError("worksheet has no header row (the file appears to be empty)") from None
+    if any(name is None for name in header):
+        # A `None`-named column (an unlabeled header cell) would otherwise
+        # produce a `None`-keyed row dict; `app.py`'s `_rows_to_texts` later
+        # does `sorted(rows[0].keys())`, and sorting a mix of `str` and
+        # `None` raises `TypeError` -- fail with a clear message here
+        # instead of that opaque 500 downstream.
+        raise ValueError(f"worksheet header row has one or more empty/unnamed cells: {header!r}")
     rows = []
     for values in rows_iter:
         row = dict(zip(header, values))
