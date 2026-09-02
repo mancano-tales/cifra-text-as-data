@@ -23,8 +23,12 @@ def parse_csv_rows(content: bytes) -> list[dict]:
 
 def parse_xlsx_rows(content: bytes) -> list[dict]:
     """Parse XLSX bytes into row dicts keyed by the active sheet's header
-    row (its first row). Skips rows whose first cell is empty -- the same
-    trailing-blank-row guard `scripts/import_v7_pilot.py` uses.
+    row (its first row). Skips rows where every cell is empty -- a real
+    trailing-blank-row guard, not conditioned on any one specific column:
+    checking only the first cell (an earlier version of this function did)
+    silently drops legitimate data rows whenever the sheet's first column
+    holds optional metadata (e.g. "notes"/"date") that happens to be blank
+    on some rows while the actual text lives in a later column.
     """
     workbook = openpyxl.load_workbook(io.BytesIO(content), data_only=True, read_only=True)
     worksheet = workbook.active
@@ -46,10 +50,9 @@ def parse_xlsx_rows(content: bytes) -> list[dict]:
         raise ValueError(f"worksheet header row has one or more empty/unnamed cells: {header!r}")
     rows = []
     for values in rows_iter:
-        row = dict(zip(header, values))
-        if row.get(header[0]) is None:
+        if all(v is None for v in values):
             continue
-        rows.append(row)
+        rows.append(dict(zip(header, values)))
     return rows
 
 

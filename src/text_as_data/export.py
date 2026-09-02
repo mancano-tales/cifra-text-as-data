@@ -17,8 +17,13 @@ def _defuse_formula(value):
     it as a formula -- a document's text or an LLM's justificativa can
     start with any of these by pure chance, not just from an attacker, and
     CSV injection (CWE-1236) is a real code-execution vector once someone
-    opens the export."""
-    if isinstance(value, str) and value.startswith(_FORMULA_PREFIXES):
+    opens the export.
+
+    Checks after stripping leading whitespace/control characters, not the
+    raw value -- Excel and LibreOffice both skip leading spaces/tabs when
+    deciding whether a cell is a formula, so a value like `" =cmd|..."`
+    would otherwise slip past a bare `.startswith()` check unquoted."""
+    if isinstance(value, str) and value.lstrip(" \t\r\n\x0b\x0c").startswith(_FORMULA_PREFIXES):
         return "'" + value
     return value
 

@@ -61,6 +61,20 @@ def test_parse_xlsx_rows_skips_blank_trailing_rows():
     assert len(rows) == 1
 
 
+def test_parse_xlsx_rows_keeps_a_row_with_a_blank_first_cell_when_other_cells_have_data():
+    # A blank-row guard keyed only on the first column silently drops real
+    # data rows whenever that column holds optional metadata (e.g. "notes")
+    # left blank on some rows while the actual text lives in column B.
+    content = _make_xlsx_bytes([["notes", "body"], [None, "First doc"], ["some note", "Second doc"]])
+
+    rows = parse_xlsx_rows(content)
+
+    assert rows == [
+        {"notes": None, "body": "First doc"},
+        {"notes": "some note", "body": "Second doc"},
+    ]
+
+
 def test_parse_xlsx_rows_rejects_a_completely_empty_workbook():
     content = _make_xlsx_bytes([])
 

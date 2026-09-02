@@ -41,6 +41,20 @@ def test_results_to_csv_bytes_defuses_leading_formula_characters():
     assert row["justificativa"] == "'=CMD|' /C calc.exe'!A0"
 
 
+def test_results_to_csv_bytes_defuses_formula_prefixed_by_leading_whitespace():
+    # Excel and LibreOffice both skip leading spaces/tabs when deciding
+    # whether a cell is a formula -- a bare `.startswith()` check on the
+    # raw value missed this, letting a value like " =cmd|...' " through
+    # unquoted.
+    rows = [{"justificativa": "  =CMD|' /C calc.exe'!A0", "categoria": "x"}]
+
+    content = results_to_csv_bytes(rows)
+
+    reader = csv.DictReader(io.StringIO(content.decode("utf-8-sig")))
+    row = next(reader)
+    assert row["justificativa"].startswith("'")
+
+
 def test_results_to_xlsx_bytes_round_trips():
     content = results_to_xlsx_bytes(SAMPLE_ROWS)
 

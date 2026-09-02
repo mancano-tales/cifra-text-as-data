@@ -99,6 +99,63 @@ def test_import_qualilab_labels_creates_human_labels_with_full_coverage():
     assert body["coverage"] == {"documents_with_value": 9, "total_corpus_documents": 9}
 
 
+def test_import_qualilab_labels_400_on_non_object_value_mapping():
+    # json.loads("[1,2,3]") succeeds without raising -- the endpoint must
+    # not blindly call .get() on whatever JSON parses to.
+    client = _client()
+    client.post("/corpora/import-qualilab", data={"name": "qlab_demo"}, files=_fixture_file())
+    codebook_id = client.post("/codebooks", json=VALID_SPEC).json()["id"]
+
+    response = client.post(
+        "/corpora/qlab_demo/import-qualilab-labels",
+        data={
+            "codebook_id": codebook_id,
+            "category_id": "cat-posicao",
+            "layer": "final",
+            "value_mapping": json.dumps([1, 2, 3]),
+        },
+        files=_fixture_file(),
+    )
+
+    assert response.status_code == 400
+
+
+def test_import_qualilab_labels_reimport_replaces_instead_of_duplicating():
+    from sqlmodel import Session, select
+
+    from text_as_data.app import get_engine_dependency as _get_engine_dep
+    from text_as_data.db import HumanLabelRecord
+
+    client = _client()
+    engine = app.dependency_overrides[_get_engine_dep]()
+    client.post("/corpora/import-qualilab", data={"name": "qlab_demo"}, files=_fixture_file())
+    codebook_id = client.post("/codebooks", json=VALID_SPEC).json()["id"]
+    request_kwargs = dict(
+        data={
+            "codebook_id": codebook_id,
+            "category_id": "cat-posicao",
+            "layer": "final",
+            "value_mapping": json.dumps(VALUE_MAPPING),
+        },
+        files=_fixture_file(),
+    )
+
+    client.post("/corpora/qlab_demo/import-qualilab-labels", **request_kwargs)
+    second = client.post("/corpora/qlab_demo/import-qualilab-labels", **request_kwargs)
+
+    assert second.status_code == 200
+    assert second.json()["created_count"] == 9
+    with Session(engine) as session:
+        rows = session.exec(
+            select(HumanLabelRecord).where(HumanLabelRecord.codebook_id == codebook_id)
+        ).all()
+        # Re-running the same import must replace, not append -- otherwise
+        # agreement_report()'s one-gold-row-per-document precondition
+        # breaks the moment a researcher re-imports after fixing a
+        # mismapped value.
+        assert len(rows) == 9
+
+
 def test_import_qualilab_labels_422_on_incomplete_mapping():
     client = _client()
     client.post("/corpora/import-qualilab", data={"name": "qlab_demo"}, files=_fixture_file())

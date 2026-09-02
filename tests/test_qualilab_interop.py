@@ -74,6 +74,35 @@ def test_open_qualilab_project_rejects_zip_with_oversized_project_json_entry(mon
         interop.open_qualilab_project(buffer.getvalue())
 
 
+def test_open_qualilab_project_fails_cleanly_on_a_zip_with_a_lied_smaller_file_size(monkeypatch):
+    # A round-2 adversarial review raised this as a potential zip-bomb
+    # bypass: `info.file_size` is client-supplied central-directory
+    # metadata, and open_qualilab_project's own size check only compares
+    # against it, not against what actually comes out of read(). Verified
+    # empirically (not assumed) that this isn't actually exploitable
+    # against Python's zipfile: ZipExtFile.read() enforces file_size as a
+    # hard cap during decompression and CRC-validates against it, so a
+    # lied-smaller value doesn't let more decompressed bytes through --
+    # it just fails fast with BadZipFile, which the existing except
+    # clause already turns into a clean ValueError. This test locks in
+    # that verified-safe behavior.
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("project.json", json.dumps({"documents": [{"id": "doc-1", "content": "x" * 50000}]}))
+
+    original_getinfo = zipfile.ZipFile.getinfo
+
+    def _lying_getinfo(self, name):
+        info = original_getinfo(self, name)
+        info.file_size = 10  # lies: understates the real ~50KB decompressed size
+        return info
+
+    monkeypatch.setattr(zipfile.ZipFile, "getinfo", _lying_getinfo)
+
+    with pytest.raises(ValueError, match="not a valid .qualilab zip file"):
+        interop.open_qualilab_project(buffer.getvalue())
+
+
 def test_open_qualilab_project_rejects_zip_missing_project_json():
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as zf:
@@ -204,6 +233,67 @@ def test_individual_layer_import_produces_multiple_rows_per_document():
     assert len({label.coder for label in doc1_labels}) >= 2  # from different coders, not deduped
 
 
+def test_import_rejects_a_category_id_not_declared_in_the_project():
+    project = _fixture_project()
+    documents = _fixture_documents()
+
+    with pytest.raises(ValueError, match="not found in the uploaded"):
+        interop.qualilab_doc_values_to_human_labels(
+            project,
+            category_id="does-not-exist",
+            codebook_id=1,
+            documents=documents,
+            value_mapping=CAT_POSICAO_MAPPING,
+            valid_categories=set(CAT_POSICAO_MAPPING.values()),
+            layer="final",
+        )
+
+
+def test_individual_layer_coverage_counts_distinct_documents_not_entries():
+    # doc-1 has 3 "individual"-layer coders for cat-posicao in the real
+    # fixture (see test_individual_layer_import_produces_multiple_rows_per_document)
+    # -- a coverage counter that increments per entry rather than per
+    # distinct document would report more "documents with a value" than
+    # the corpus actually has documents.
+    project = _fixture_project()
+    documents = _fixture_documents()
+
+    result = interop.qualilab_doc_values_to_human_labels(
+        project,
+        category_id="cat-posicao",
+        codebook_id=1,
+        documents=documents,
+        value_mapping=CAT_POSICAO_MAPPING,
+        valid_categories=set(CAT_POSICAO_MAPPING.values()),
+        layer="individual",
+    )
+
+    assert result.coverage["documents_with_value"] <= result.coverage["total_corpus_documents"]
+    assert result.coverage["total_corpus_documents"] == 9
+
+
+def test_import_raises_when_zero_documents_have_a_value():
+    # category_id is real, but the corpus's documents have no matching
+    # external_id (e.g. a CSV/XLSX-imported corpus) -- every doc_values
+    # entry is silently skipped, and without this guard the caller would
+    # get back a false "successful" 0-row import.
+    project = _fixture_project()
+    documents = [
+        DocumentRecord(id=1, corpus_id="demo", text="unrelated content", external_id=None)
+    ]
+
+    with pytest.raises(ValueError, match="no doc_values found"):
+        interop.qualilab_doc_values_to_human_labels(
+            project,
+            category_id="cat-posicao",
+            codebook_id=1,
+            documents=documents,
+            value_mapping=CAT_POSICAO_MAPPING,
+            valid_categories=set(CAT_POSICAO_MAPPING.values()),
+            layer="final",
+        )
+
+
 def test_final_layer_import_rejects_a_file_with_duplicate_final_entries():
     # Synthetic project: deliberately malformed in a way the real fixture
     # never is, to exercise finding #14's guard.
@@ -293,6 +383,34 @@ def test_inject_extractions_rejects_a_value_not_in_declared_options():
             project, extractions, documents, category_id="cat-a",
             reverse_value_mapping={"yes": "Not A Real Option"}, run_id=1, model_label="test-model",
         )
+
+
+def test_inject_extractions_skips_error_categoria_instead_of_failing_the_whole_export():
+    # run_extraction records a per-document failure as ERROR_CATEGORIA
+    # instead of aborting the run -- exporting a run with one failed
+    # document among many good ones must not fail the entire export just
+    # because "__error__" was never a real codebook category with an
+    # entry in reverse_value_mapping.
+    from text_as_data.extraction import ERROR_CATEGORIA
+
+    project = _synthetic_project()
+    documents = [
+        DocumentRecord(id=1, corpus_id="demo", text="hello world", external_id="doc-1"),
+        DocumentRecord(id=2, corpus_id="demo", text="goodbye world", external_id="doc-2"),
+    ]
+    extractions = [
+        ExtractionRecord(id=1, run_id=1, document_id=1, categoria="yes", justificativa="x", trecho_evidencia="hello"),
+        ExtractionRecord(id=2, run_id=1, document_id=2, categoria=ERROR_CATEGORIA, justificativa="timed out", trecho_evidencia=""),
+    ]
+
+    result = interop.inject_extractions_into_qualilab(
+        project, extractions, documents, category_id="cat-a",
+        reverse_value_mapping={"yes": "Sim"}, run_id=1, model_label="test-model",
+    )
+
+    assert result.matched_count == 1
+    assert result.skipped_count == 1
+    assert len(result.project["doc_values"]) == 1
 
 
 def test_inject_extractions_rejects_zero_matched_documents():

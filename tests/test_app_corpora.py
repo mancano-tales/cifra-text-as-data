@@ -77,6 +77,62 @@ def test_csv_upload_rejects_unknown_text_column():
     assert response.status_code == 422
 
 
+def test_csv_upload_with_extra_trailing_fields_reports_clean_422_not_crash():
+    # csv.DictReader collects columns beyond the header count under a
+    # `None` key -- an unrecognized text_column error detail that sorts
+    # rows[0].keys() would otherwise raise a raw TypeError (str vs None)
+    # instead of this 422.
+    client, _ = _make_test_client()
+    csv_content = b"title,body\nA,First doc,extra,fields\n"
+
+    response = client.post(
+        "/corpora/csv",
+        data={"name": "ragged", "text_column": "nope"},
+        files={"file": ("ragged.csv", csv_content, "text/csv")},
+    )
+
+    assert response.status_code == 422
+    assert "nope" in response.json()["detail"]
+
+
+def test_csv_upload_keeps_rows_whose_text_column_is_numeric_zero():
+    client, engine = _make_test_client()
+    csv_content = b"score,body\n0,First doc\n1,Second doc\n"
+
+    response = client.post(
+        "/corpora/csv",
+        data={"name": "scores", "text_column": "score"},
+        files={"file": ("scores.csv", csv_content, "text/csv")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["document_count"] == 2
+    with Session(engine) as session:
+        docs = session.exec(select(DocumentRecord).where(DocumentRecord.corpus_id == "scores")).all()
+        assert sorted(d.text for d in docs) == ["0", "1"]
+
+
+def test_paste_rejects_empty_text_instead_of_creating_a_phantom_corpus():
+    client, _ = _make_test_client()
+
+    response = client.post("/corpora/paste", json={"name": "empty_notes", "text": ""})
+
+    assert response.status_code == 400
+
+
+def test_csv_upload_rejects_when_every_row_is_empty_instead_of_creating_a_phantom_corpus():
+    client, _ = _make_test_client()
+    csv_content = b"title,body\nA,\nB,\n"
+
+    response = client.post(
+        "/corpora/csv",
+        data={"name": "all_blank", "text_column": "body"},
+        files={"file": ("all_blank.csv", csv_content, "text/csv")},
+    )
+
+    assert response.status_code == 400
+
+
 def test_xlsx_upload_creates_documents_from_text_column():
     client, engine = _make_test_client()
     xlsx_content = _make_xlsx_bytes([["title", "body"], ["A", "First doc"], ["B", "Second doc"]])
@@ -142,6 +198,26 @@ def test_list_corpus_documents_paginates():
 
     assert response.status_code == 200
     assert [d["text"] for d in response.json()] == ["row1", "row2"]
+
+
+def test_list_corpus_documents_rejects_negative_offset():
+    client, _ = _make_test_client()
+    client.post("/corpora/paste", json={"name": "neg_offset", "text": "a"})
+
+    response = client.get("/corpora/neg_offset/documents?offset=-1")
+
+    # Previously: SQLite rejects a negative OFFSET clause with an
+    # sqlite3.OperationalError, surfacing as an unhandled 500.
+    assert response.status_code == 422
+
+
+def test_list_corpus_documents_rejects_an_excessive_limit():
+    client, _ = _make_test_client()
+    client.post("/corpora/paste", json={"name": "big_limit", "text": "a"})
+
+    response = client.get("/corpora/big_limit/documents?limit=10000000")
+
+    assert response.status_code == 422
 
 
 def test_list_corpus_documents_404_for_unknown_corpus():
