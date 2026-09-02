@@ -57,6 +57,26 @@ def test_agreement_report_flags_mismatches():
     assert report["mismatches"][0]["id"] == 2
 
 
+def test_agreement_report_includes_precision_recall_f1_per_category():
+    predicted = pd.DataFrame(
+        {"id": [1, 2, 3, 4], "categoria": ["protest", "protest", "not_protest", "protest"]}
+    )
+    gold = pd.DataFrame(
+        {"id": [1, 2, 3, 4], "categoria": ["protest", "not_protest", "not_protest", "protest"]}
+    )
+
+    report = agreement_report(predicted, gold)
+
+    metrics = report["per_column"]["categoria"]
+    assert set(metrics["precision"].keys()) == {"protest", "not_protest"}
+    # 3 rows predicted "protest" (1, 2, 4); 2 of those are actually gold "protest" (1, 4) -> 2/3
+    assert metrics["precision"]["protest"] == pytest.approx(2 / 3)
+    # 2 rows are actually gold "protest" (1, 4); both predicted correctly -> 2/2
+    assert metrics["recall"]["protest"] == pytest.approx(1.0)
+    assert "f1" in metrics
+    assert metrics["f1"]["protest"] == pytest.approx(0.8)  # 2*P*R/(P+R) = 2*(2/3)*1/(2/3+1)
+
+
 def test_toy_example_codebook_builds_messages(toy_codebook_module):
     codebook = toy_codebook_module.toy_codebook
 
