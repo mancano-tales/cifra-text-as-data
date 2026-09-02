@@ -17,7 +17,7 @@ from .disclosure import build_disclosure
 from .export import results_to_csv_bytes, results_to_json_bytes, results_to_xlsx_bytes
 from .extraction import run_extraction
 from .providers import CliProvider, Provider, make_api_key_provider
-from .validation import reproducibility_report
+from .validation import agreement_report, reproducibility_report
 from .qualilab_interop import (
     inject_extractions_into_qualilab,
     open_qualilab_project,
@@ -266,6 +266,178 @@ def update_extraction(
         session.commit()
         session.refresh(extraction)
         return _extraction_with_snippet(session, extraction)
+
+
+@app.post("/runs/{run_id}/gold-labels")
+async def upload_gold_labels(run_id: int, file: UploadFile = File(...), engine=Depends(get_engine_dependency)):
+    """Upload hand-reviewed gold labels for a run, from a CSV shaped like
+    `GET /runs/{run_id}/export?format=csv`'s own output plus one more
+    column: `gold_categoria` (blank for rows not yet reviewed). All-or-
+    nothing on validity -- a non-blank value that isn't one of the
+    codebook's real category labels rejects the whole upload with every
+    bad row listed, since a silently-accepted typo would corrupt the gold
+    set for every future validation report against this codebook."""
+    with Session(engine) as session:
+        run = session.get(RunRecord, run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"run {run_id} not found")
+
+        codebook = session.get(CodebookRecord, run.codebook_id)
+        valid_labels = {c["label"] for c in spec_from_yaml_string(codebook.yaml_raw)["categories"]}
+
+    content = await file.read()
+    try:
+        rows = parse_csv_rows(content)
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail=f"could not decode file as UTF-8: {exc}") from exc
+    if not rows or "document_id" not in rows[0] or "gold_categoria" not in rows[0]:
+        raise HTTPException(
+            status_code=422,
+            detail="file must have 'document_id' and 'gold_categoria' columns "
+            "(export a run's results and add a gold_categoria column to it)",
+        )
+
+    to_import: list[tuple[int, str]] = []
+    skipped_blank = 0
+    bad_rows: list[str] = []
+    for row in rows:
+        value = (row.get("gold_categoria") or "").strip()
+        if not value:
+            skipped_blank += 1
+            continue
+        if value not in valid_labels:
+            bad_rows.append(f"document_id {row['document_id']}: {value!r} is not a valid category")
+            continue
+        try:
+            document_id = int(row["document_id"])
+        except (TypeError, ValueError):
+            bad_rows.append(f"document_id {row['document_id']!r} is not a valid integer")
+            continue
+        to_import.append((document_id, value))
+
+    if bad_rows:
+        raise HTTPException(
+            status_code=422,
+            detail=f"expected one of {sorted(valid_labels)}; problems found: " + "; ".join(bad_rows),
+        )
+
+    with Session(engine) as session:
+        # Replace, not append: the design spec expects re-uploads as
+        # coverage grows over time, not a one-shot action -- without this,
+        # re-uploading a correction for a document already manually
+        # labeled would insert a second HumanLabelRecord for it, and the
+        # validation report would then wrongly exclude that document as
+        # "multi-coder" instead of using the corrected value.
+        imported_document_ids = {document_id for document_id, _ in to_import}
+        if imported_document_ids:
+            session.exec(
+                delete(HumanLabelRecord).where(
+                    HumanLabelRecord.codebook_id == run.codebook_id,
+                    HumanLabelRecord.source == "manual",
+                    HumanLabelRecord.document_id.in_(imported_document_ids),
+                )
+            )
+        for document_id, category in to_import:
+            session.add(
+                HumanLabelRecord(
+                    document_id=document_id,
+                    codebook_id=run.codebook_id,
+                    category=category,
+                    coder="manual",
+                    source="manual",
+                )
+            )
+        session.commit()
+
+    return {"imported": len(to_import), "skipped_blank": skipped_blank}
+
+
+@app.get("/runs/{run_id}/validation")
+def get_run_validation(run_id: int, engine=Depends(get_engine_dependency)):
+    """Compare a run's extractions against hand-reviewed gold labels
+    (uploaded via `POST /runs/{run_id}/gold-labels`) -- coverage, per-
+    category accuracy/kappa/precision/recall/F1, and a disagreement list.
+    A document with more than one gold row (e.g. a QualiLab "individual"-
+    layer import with multiple coders) is excluded and counted, not
+    silently resolved to one value -- picking or aggregating across
+    coders is a validation-methodology decision this endpoint doesn't
+    make on the researcher's behalf."""
+    with Session(engine) as session:
+        run = session.get(RunRecord, run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"run {run_id} not found")
+
+        extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
+        total_documents = len(
+            session.exec(select(DocumentRecord).where(DocumentRecord.corpus_id == run.corpus_id)).all()
+        )
+        gold_rows = session.exec(
+            select(HumanLabelRecord).where(HumanLabelRecord.codebook_id == run.codebook_id)
+        ).all()
+
+        gold_by_document: dict[int, list[str]] = {}
+        for row in gold_rows:
+            gold_by_document.setdefault(row.document_id, []).append(row.category)
+
+        single_gold: dict[int, str] = {}
+        excluded_multi_coder = 0
+        for document_id, categories in gold_by_document.items():
+            if len(categories) > 1:
+                excluded_multi_coder += 1
+                continue
+            single_gold[document_id] = categories[0]
+
+        predicted_rows = [
+            {"id": e.document_id, "categoria": e.categoria} for e in extractions if e.document_id in single_gold
+        ]
+
+        if not predicted_rows:
+            return {
+                "coverage": {
+                    "labeled": len(single_gold),
+                    "total": total_documents,
+                    "excluded_multi_coder": excluded_multi_coder,
+                },
+                "per_category": {},
+                "disagreements": [],
+            }
+
+        predicted_document_ids = {row["id"] for row in predicted_rows}
+        gold_df_rows = [
+            {"id": doc_id, "categoria": cat}
+            for doc_id, cat in single_gold.items()
+            if doc_id in predicted_document_ids
+        ]
+
+        predicted_df = pd.DataFrame(predicted_rows)
+        gold_df = pd.DataFrame(gold_df_rows)
+        report = agreement_report(predicted_df, gold_df, id_col="id", columns=["categoria"])
+        metrics = report["per_column"]["categoria"]
+
+        extraction_by_document = {e.document_id: e for e in extractions}
+        disagreements = []
+        for mismatch in report["mismatches"]:
+            document_id = mismatch["id"]
+            extraction = extraction_by_document[document_id]
+            document = session.get(DocumentRecord, document_id)
+            disagreements.append(
+                {
+                    "document_id": document_id,
+                    "document_snippet": document.text[:160] if document else "",
+                    "predicted": mismatch["predicted"],
+                    "gold": mismatch["gold"],
+                }
+            )
+
+        return {
+            "coverage": {
+                "labeled": len(single_gold),
+                "total": total_documents,
+                "excluded_multi_coder": excluded_multi_coder,
+            },
+            "per_category": metrics,
+            "disagreements": disagreements,
+        }
 
 
 @app.get("/runs/{run_id}/export")
