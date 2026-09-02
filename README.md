@@ -47,7 +47,32 @@ Cifra follows a lightweight, local-first **sidecar backend architecture** (Pytho
 
 ```bash
 pip install -e ".[dev]"
+cd frontend && npm install && cd ..
 ```
+
+---
+
+## Running it (development)
+
+There's no packaged app yet (see `AGENTS.md`'s Phase 2 plan for that) — running
+Cifra today means starting the FastAPI backend and the Vite frontend
+together. `scripts/dev.sh` (macOS/Linux/Git Bash) and `scripts/dev.ps1`
+(native PowerShell) do that with one command instead of two terminals:
+
+```bash
+scripts/dev.sh              # backend on :8000, frontend on :5173
+scripts/dev.sh 8010 5183    # optional: override both ports
+```
+
+```powershell
+powershell -File scripts/dev.ps1
+powershell -File scripts/dev.ps1 -BackendPort 8010 -FrontendPort 5183
+```
+
+Then open `http://localhost:5173` (or whichever frontend port you chose).
+Ctrl+C stops both processes. You'll need either an `ANTHROPIC_API_KEY`
+environment variable or an already-authenticated CLI (`claude`, `agy`, ...)
+for the LLM calls a run actually makes.
 
 ---
 
