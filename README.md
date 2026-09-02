@@ -2,7 +2,7 @@
 
 # cifra-text-as-data — Cifra
 
-**Cifra** is a local-first tool for social scientists (political science, sociology, geography) to code unstructured text (news articles, policy statements, police reports) into categorical variables using an LLM against an explicit, theoretical **codebook** — with a validation step against human-coded gold labels, because LLMs do not follow a codebook's specific definitions with perfect fidelity.
+**Cifra** is a tool for analysts and researchers to code unstructured text (news articles, policy statements, police reports) into categorical variables using an LLM against an explicit, theoretical **codebook** — with a validation step against human-coded gold labels, because LLMs do not follow a codebook's specific definitions with perfect fidelity.
 
 It is not a manual qualitative-coding tool (see [Taguette](https://www.taguette.org/), [QualCoder](https://github.com/ccbogel/QualCoder), or [QualiLab](https://github.com/LuizPF42/QualiLab) for that). The researcher defines a codebook and points it at a corpus; Cifra calls an LLM to fill the output table automatically.
 
