@@ -30,7 +30,13 @@ app = FastAPI(title="Cifra backend (Slice 1)")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    # A fixed single origin (":5173") breaks the moment two dev frontends
+    # run at once on different ports -- a real scenario, not hypothetical,
+    # once multiple people/sessions work on this repo locally. Any
+    # localhost/127.0.0.1 origin on any port is allowed instead; this is a
+    # local dev backend, not a deployed one, so there's no production
+    # origin to restrict against.
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_methods=["*"],
     allow_headers=["*"],
 )
