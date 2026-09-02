@@ -1,0 +1,91 @@
+---
+title: "Cifra"
+subtitle: "Codebook-driven text coding, validated against human coding"
+---
+
+## The problem
+
+Social scientists — political science, sociology, geography — routinely turn
+unstructured text into categorical data: is this news article describing a
+protest? does this public statement support or oppose a policy? Historically
+this is done by hand, with a research assistant reading each document and
+filling in a spreadsheet against a codebook the researcher wrote.
+
+LLMs can now automate a large share of that mechanical work. But every
+researcher who tries currently reinvents the same pipeline from scratch —
+and, more importantly, most skip the part that actually makes automated
+coding trustworthy: checking whether the model followed *this specific*
+codebook, or fell back on its own generic notion of the concept.
+
+## What Cifra is
+
+Cifra is a local-first tool: the researcher authors a codebook (a concept,
+its categories, definitions, examples, boundary notes), points it at a text
+corpus, and the software calls an LLM to fill in a structured results table —
+one category, one rationale, one quoted evidence span per document. Every
+result carries a full audit trail: the exact prompt sent, the raw response
+received, which model and provider mode produced it.
+
+It is **not** a manual qualitative-coding tool — [Taguette](https://www.taguette.org/),
+[QualCoder](https://github.com/ccbogel/QualCoder), and
+[QualiLab](https://github.com/luizpf42/QualiLab) already do that well. Cifra is
+closer to the inverse: it automates the mechanical categorization step so a
+human doesn't have to read every row, while treating the researcher's
+judgment — codebook design, model/parameter choices, and the decision of
+whether automated output is reliable enough to become research data — as
+non-negotiable and non-automatable.
+
+## What "automated" does not mean
+
+Automation applies to one step: turning text into a category without a human
+reading every row. It does not remove the researcher from anything else.
+The researcher is still solely responsible for:
+
+- **designing the codebook** — which categories exist, how each is defined,
+  where the conceptual boundaries sit;
+- **choosing the pipeline** — which corpus, which model, which provider;
+- **interpreting results**; and
+- **deciding, via validation, whether automated coding is reliable enough
+  to use as data.**
+
+The Codebook Editor is the most important screen in the software, not a
+form to get through before "the real part."
+
+## Why validation is not a footnote
+
+[Halterman & Keith (2025)](https://arxiv.org/abs/2407.10747) — and the
+same group's 2026 follow-up — show that off-the-shelf LLMs frequently
+ignore a codebook's specific operationalization and substitute their own
+generic notion of a concept instead: including a labor strike under
+"protest" even when the codebook explicitly excludes it, for example. A
+model that looks fluent is not the same as a model that followed the
+instructions.
+
+Cifra ran this failure mode for real, not hypothetically. See
+[Why Validation Matters](validation.qmd) for the numbers: an under-specified
+codebook produced results with essentially zero discriminating power on a
+third of a real test batch, and a hypothesis's own scope condition got
+silently ignored. Enriching the codebook — not switching models — fixed
+both, and the before/after is verifiable, not just asserted.
+
+## Current status
+
+Cifra is pre-1.0, under active development. As of this page:
+
+- **Corpus import** — CSV/XLSX/pasted text, with column mapping.
+- **Codebook editor** — structured form with a live YAML preview.
+- **Runs** — kick off an extraction against a corpus + codebook, watch it
+  progress, pick API-key mode (schema enforced via
+  [`instructor`](https://github.com/jxnl/instructor)) or CLI mode
+  (any installed CLI the researcher already has a subscription for).
+- **Results** — browsable table, inline edits, CSV/XLSX/JSON export, and a
+  per-run [GUIDE-LLM](https://llm-checklist.com/)-shaped AI-use disclosure
+  report.
+- **Validation** — gold-label import (including round-tripping with
+  QualiLab), Cohen's kappa, precision/recall/F1 per category.
+
+See [How It Works](how-it-works.qmd) for the pipeline end to end, and
+[Architecture](architecture.qmd) for the technical design and why it looks
+the way it does.
+
+Source, issues, and full history: [github.com/mancano-tales/cifra-text-as-data](https://github.com/mancano-tales/cifra-text-as-data).

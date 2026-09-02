@@ -1,0 +1,138 @@
+---
+title: "How It Works"
+subtitle: "The pipeline, end to end, with what actually gets sent to the model"
+---
+
+## 1. The codebook
+
+A codebook is a concept operationalized as categories. It is authored as
+YAML — editable in the Codebook Editor's structured form, or by hand — with
+this shape, based on Halterman & Keith's "Stage 0: Codebook Preparation":
+
+```yaml
+concept: protest
+description: >
+  A collective, public event expressing a political or social claim,
+  involving at least two people.
+categories:
+  - label: protest
+    definition: >
+      An occupation, march, or strike with a declared political demand, or
+      a road blockade with a stated claim.
+    positive_examples:
+      - "About 200 people occupied the square in front of city hall..."
+    negative_examples:
+      - "People gathered for a cultural event with no political claim"
+    boundary_notes: >
+      Does not include purely ceremonial/commemorative events with no
+      claim being made. A labor strike with no political demand is a
+      boundary case — decide explicitly whether to include or exclude it.
+  - label: not_protest
+    definition: "Any event that does not meet the criteria above."
+```
+
+`concept`, `description`, and each category's `label`/`definition` are
+required; `positive_examples`, `negative_examples`, and `boundary_notes` are
+optional but strongly recommended — see [Why Validation Matters](validation.qmd)
+for a real before/after showing how much a well-specified `boundary_notes`
+and `description` change model behavior on the same evidence.
+
+## 2. Deriving the output schema
+
+The codebook's category labels become a Pydantic `Literal` enum at run
+time — the model's `categoria` field can only ever be one of the labels the
+codebook actually defines, never an invented one. Two more fields are fixed
+across every codebook by contract: `justificativa` (free-text rationale) and
+`trecho_evidencia` (a verbatim quote from the document grounding the
+decision) — this is what makes a result auditable rather than a bare label.
+
+## 3. Building the prompt
+
+Every request sent to the model is built from the same fixed shape:
+
+```
+You are a careful annotator applying a fixed coding scheme. Follow the
+instructions below exactly as written, even when a case looks similar to
+a more common or generic concept. Do not substitute your own default
+definition for the one given.
+
+Concept: <concept>
+<description>
+
+Categories:
+- <label>: <definition>
+  Positive example: "..."
+  Negative example: "..."
+  Boundary notes: ...
+[... one block per category ...]
+```
+
+followed by the document's own text, and — for CLI-mode providers — a
+final block asking for a single JSON object matching the schema. Nothing
+here is hidden: `Codebook.build_messages()` builds exactly this from the
+stored codebook, so it can be reconstructed and verified from the codebook
+record alone.
+
+## 4. Calling the model — two provider modes, one interface
+
+Cifra's provider layer is deliberately agent-agnostic. Both modes implement
+the same `Provider.extract(messages, schema)` interface, so the extraction
+engine never has to know which one is active:
+
+**API-key mode** — a direct key (Anthropic or OpenAI) via
+[`instructor`](https://github.com/jxnl/instructor). Schema is enforced at
+the API level through function/tool calling: the provider cannot return a
+response that fails to validate. This is the reliable path for a real
+coding run.
+
+**CLI mode** — shells out to an already-installed CLI the researcher has a
+subscription for (Claude Code, a Codex-style CLI, or any command that takes
+a prompt and returns text). No API-level schema enforcement exists here —
+the schema is requested in the prompt text, and the response is scanned for
+the first JSON object that actually validates against it, with up to three
+retries on malformed output. This is explicitly best-effort: the trade-off
+for not needing a separately billed API key.
+
+## 5. Running extraction
+
+A run pairs one codebook with one corpus. For each document:
+
+1. Check for a cached extraction — same document, same codebook, same
+   model. If found, reuse it; no repeat API call, no repeat cost.
+2. Otherwise call the provider (with retry on transient failures).
+3. Persist the result: `categoria`, `justificativa`, `trecho_evidencia`,
+   plus the full audit trail (`prompt_sent`, `raw_response`) — the literal
+   prompt and the model's raw answer, not a reconstruction after the fact.
+4. A single document's failure is recorded as an error row (`categoria =
+   "__error__"`), not a crash of the whole run.
+
+This runs as a background task — a researcher can close the tab and the
+run keeps going, then browse a live-updating progress bar and results table
+when they come back.
+
+## 6. Results, export, and disclosure
+
+Results are browsable and editable in place — an edit is validated against
+the run's own codebook labels, so it's impossible to hand-correct a row
+into a category the codebook doesn't define. Export to CSV, XLSX, or JSON
+carries every field, audit trail included, since the export endpoint reuses
+the same row-building logic as the results view — there is no separate,
+narrower export path that drops fields silently.
+
+Each run can also generate a [GUIDE-LLM](https://llm-checklist.com/)-shaped
+AI-use disclosure report: model, provider mode, access mode, the exact
+prompt per document, whether output has been validated against human
+labels yet, and reproducibility pointers (codebook id, run id, the git
+commit that produced it) — answering the actual consensus checklist for
+reporting LLM use in behavioral/social science research, not a generic
+AI-use paragraph.
+
+## 7. Validation
+
+Once a subset of documents has human-coded gold labels — either imported
+directly as a plain CSV, or round-tripped from a
+[QualiLab](https://github.com/luizpf42/QualiLab) manual-coding project —
+Cifra computes accuracy, Cohen's kappa, and per-category precision/recall/F1
+against a run's output, and surfaces the disagreements for manual reading.
+See [Why Validation Matters](validation.qmd) for why this step exists at
+all and what it caught in practice.

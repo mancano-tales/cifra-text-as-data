@@ -1,0 +1,103 @@
+---
+title: "Architecture"
+subtitle: "Stack, data model, and the decisions behind them"
+---
+
+## Stack
+
+**Backend**: Python + FastAPI, running locally via `uvicorn`. Responsible
+for LLM calls, a background job queue (nothing heavier than a Python
+background task in the MVP — no Redis/Celery), and a SQLite database
+(via SQLModel) holding codebooks, corpora, runs, and results.
+
+**Frontend**: a Vite + React + TypeScript single-page app talking to the
+backend over `fetch`. Bilingual (PT-BR/EN) via `react-i18next`.
+
+**Local execution**: the backend comes up on a local port and responds via
+`curl` with no frontend open at all — this is a deliberate acceptance
+criterion, checked repeatedly during development, not an implementation
+detail. If the backend ever needed the frontend to function, that would be
+a sign of improper coupling to fix, not a shortcut to take.
+
+## Why not a single-file browser tool like QualiLab
+
+The honest version of this comparison, corrected after actually reading
+QualiLab's source rather than assuming: QualiLab is not purely manual —
+it has five LLM-backed "Auto-coding" assistants and a blind-evaluation
+feature conceptually close to a validation step. The real difference is
+architectural, not manual-vs-automated:
+
+- **Scale ceiling**: QualiLab caps a single send at roughly 600,000
+  characters total, with documents beyond that dropped entirely. Cifra
+  needs to run hundreds or thousands of LLM calls over a full corpus with
+  no such ceiling.
+- **Execution model**: QualiLab's AI calls are synchronous within the open
+  browser tab, with no persistent job queue and no resumable run if the tab
+  closes — a direct consequence of its deliberate single-file,
+  no-server-of-its-own design. Cifra's batched calls need retry, caching,
+  and cost tracking, and must survive closing the tab; that calls for a
+  real backend process.
+- **Credential handling**: routing an API key through browser JavaScript
+  alone is uncomfortable and unsafe for a tool meant to run large, billed
+  batches. A local backend keeps the key server-side, never shipped to the
+  page.
+
+This is not a reason to ignore QualiLab — it's the reason Cifra treats
+interoperability with it as a real priority (round-tripping corpora and
+gold labels) rather than duplicating its mature manual-review UI from
+scratch. See the codebook/data model below for where that interop lands.
+
+## Provider layer — agent-agnostic by design
+
+Two credential modes behind one interface (`Provider.extract`), so the
+extraction engine never branches on which is active:
+
+1. **CLI mode** — shells out to an installed CLI the researcher already
+   pays for (Claude Code, Codex, or a generic command adapter). Best-effort
+   only: no schema-enforcement mechanism equivalent to function-calling, so
+   a higher error rate is the accepted trade-off for not requiring a
+   separately billed API key.
+2. **API-key mode** — a direct key via `instructor`, the reliable,
+   guaranteed-schema path for real, large coding runs.
+
+## Data model (SQLite, high level)
+
+- `codebooks` — id, name, the codebook's own YAML, created_at.
+- `documents` — id, corpus_id, text, metadata.
+- `runs` — id, codebook_id, corpus_id, model, provider_mode,
+  provider_detail, status, created_at.
+- `extractions` — id, run_id, document_id, categoria, justificativa,
+  trecho_evidencia, **prompt_sent, raw_response** (the audit trail — see
+  [How It Works](how-it-works.qmd)).
+- `human_labels` — id, document_id, codebook_id, categoria, coder, source,
+  layer — designed to hold multiple gold-coding rows per document
+  (distinguishing a plain-CSV import from a QualiLab round-trip, and a
+  "final" reconciled layer from an in-progress one), not just one gold
+  label per document.
+
+Schema changes to an already-running local database are applied additively
+at every startup (new columns get `ALTER TABLE ADD COLUMN`, existing data
+untouched) rather than requiring a manual fix to whatever `.sqlite` file
+happens to be live — a real bug hit twice during development before this
+was generalized.
+
+## Roadmap: desktop packaging
+
+The long-term goal is a packaged desktop app (Windows/Mac/Linux), not a
+script only the author knows how to run — but not by rewriting anything in
+Tauri/Electron-native code from day one. The plan:
+
+1. **Now**: standalone FastAPI backend, sidecar-ready from the first
+   commit, all persistence local.
+2. **Later, once the pipeline is validated with real use**: compile the
+   backend into a single binary (PyInstaller or Nuitka) and wrap it with
+   Tauri (preferred over Electron — uses the system webview) as the
+   desktop shell, auto-starting the binary as a sidecar. The LLM/
+   validation/cache logic is packaged, not rewritten — the same pattern
+   today's local-LLM desktop apps already use.
+
+Rewriting the orchestration/retry/cache/kappa logic in Rust or TypeScript
+would cost real engineering for no benefit over Python's mature LLM SDKs
+and `scikit-learn` — that route is only worth reconsidering if the Python
+sidecar itself proves genuinely problematic to distribute cross-platform in
+practice.

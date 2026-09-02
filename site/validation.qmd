@@ -1,0 +1,113 @@
+---
+title: "Why Validation Matters"
+subtitle: "Not a checklist item — the thing that separates data from a guess"
+---
+
+## The claim, and why it needs more than a citation
+
+[Halterman & Keith (2025)](https://arxiv.org/abs/2407.10747) and the same
+group's 2026 follow-up argue that off-the-shelf LLMs frequently substitute
+their own generic notion of a concept for a codebook's specific
+operationalization. Cifra's design takes that seriously enough to build a
+whole screen around catching it — but a citation isn't proof it applies to
+*this* pipeline. So it was tested for real, against real data, with the
+result kept regardless of which way it came out.
+
+## The test: a real Bayesian process-tracing pilot
+
+The pilot corpus is a Bayesian abductive process-tracing evidence database
+(Fairfield & Charman 2022) built for a separate MA thesis on Brazilian
+tertiary-education politics: pairs of rival hypotheses (e.g. *"expansion
+tracks partisan turnover"* vs. *"de-commodification is the real
+redistributive mechanism"*), each evaluated against real news evidence on a
+seven-level verbal probability scale.
+
+Sixteen real evidence/hypothesis-pair evaluations were run through Cifra's
+actual extraction engine — not a mocked call, not a description of what the
+model would probably say — using a codebook that named each hypothesis and
+its scale, but nothing more:
+
+```yaml
+description: >
+  Inhabit the world of the hypothesis 'Ideological Preference for Private
+  Provision'... The competing hypothesis in this pair is 'Path Dependence
+  and Fiscal Constraint' -- do not evaluate that one here.
+categories:
+  - label: quase_certa
+    definition: "Quase certamente observaríamos esta evidência... (~0.95)."
+  # ... six more labels, no further guidance
+```
+
+## What went wrong
+
+Three concrete, checkable failure modes, not a vague "sometimes wrong":
+
+1. **No discriminating power.** In 6 of 16 evaluations, *both* competing
+   hypotheses in a pair scored `muito_provavel` (highly expected) — a
+   likelihood ratio of roughly 1, which by construction can't discriminate
+   between rival explanations. 66% of all outputs landed on `muito_provavel`
+   specifically, a strong bias toward affirming relevance rather than
+   weighing it against the alternative.
+2. **A hypothesis's own scope condition, ignored.** One hypothesis
+   specifically theorized *right-wing, market-aligned governments*
+   promoting private provision. Real evidence about a 2004 policy from a
+   left-wing government scored `muito_provavel` anyway — the model matched
+   the general topic (government incentivizing private education) without
+   checking whether the specific actor matched what the hypothesis
+   required.
+3. **Inconsistent treatment of near-identical evidence.** Three separate
+   pieces of evidence, all showing the same student-financing program being
+   tightened, were scored in contradictory directions with no stated rule
+   distinguishing them.
+
+## The fix, and the proof it worked
+
+The codebook — not the model — changed: the full mechanism and premises
+for each hypothesis (not just its name), the rival hypothesis stated
+explicitly as the counterfactual, and three added instructions — a scope
+check, an explicit discriminating-power question ("would a reasonable
+observer expect this same evidence equally well under the rival
+hypothesis?"), and a consistency rule for evidence showing policy change.
+
+The *identical* 16 evaluations were re-run through the *identical* model
+and provider, nothing else changed:
+
+| | Before | After |
+|---|---|---|
+| Non-discriminating evaluations (both sides scored high) | 6 / 16 | **0 / 16** |
+| Share of outputs scoring `muito_provavel` | 66% | 28% |
+| The scope-condition case (left-wing government vs. a right-wing-specific hypothesis) | `muito_provavel` (wrong) | `quase_impossivel`, with the model's own justification naming the governing party and calling it a "hoop test failure" |
+
+Same model. Same provider. Only the prompt changed. This is the concrete,
+falsifiable version of Cifra's own thesis: an LLM coding failure is, first
+and most often, a codebook-specification problem — not a reason to swap
+models.
+
+## A second, uncomfortable finding: single-run variance
+
+The same 16 evaluations, run twice through the *same, already-enriched*
+codebook with nothing changed between runs, agreed exactly on only 21 of 32
+(66%) decisions. Nine of the eleven disagreements were one step apart on
+the seven-point scale; one was a real reversal. Reading both justifications
+for that reversal side by side showed two independently well-reasoned
+readings of genuinely ambiguous evidence — not the model being incoherent.
+
+The practical conclusion: even a well-specified codebook does not make a
+single LLM run definitive. Cifra's validation screen exists to compare
+output against human gold labels — this finding is why running a category
+more than once, or otherwise surfacing sampling variance, matters too, not
+just codebook quality.
+
+## What this means for using Cifra
+
+Treat every automated result as provisional until it has been checked
+against a human-coded sample for that specific codebook. A tight, richly
+specified codebook is the single highest-leverage thing a researcher
+controls before that check — worth the time it takes to write boundary
+notes and examples, not a formality to skip past. The Validation screen
+(Cohen's kappa, per-category precision/recall/F1, and a disagreement list
+for manual reading) is what turns that check into a number, not a feeling.
+
+Full methodology, including the verification procedure used to prove none
+of the numbers above were reconstructed after the fact, is in the
+[repository's research notes](https://github.com/mancano-tales/cifra-text-as-data/blob/main/docs/research/2026-09-02_llm_pipeline_verification_methodology.md).
