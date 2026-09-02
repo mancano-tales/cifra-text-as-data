@@ -17,21 +17,6 @@
   straight into the merge.
 ## Prospective
 
-- DAAF-style **Reproducibility Verification** as its own validation mode
-  (2026-09-02, from studying `DAAF-Contribution-Community/daaf`): beyond
-  comparing a run's output to human gold labels (kappa/precision/recall),
-  verify the *pipeline itself* is reproducible — same codebook + same
-  model + same corpus should (within whatever tolerance non-deterministic
-  LLM output allows) produce the same categoria. There's already a real
-  data point for this: the V7 pilot's same-prompt repeat run found only
-  21/32 (66%) exact agreement (see
-  `docs/research/2026-09-02_llm_pipeline_verification_methodology.md`).
-  DAAF has a dedicated engagement mode for exactly this — point it at a
-  finished analysis and it reruns everything, reporting discrepancies.
-  Bigger than the disclosure/provenance work above (needs its own design:
-  what tolerance counts as "reproduced," N repeats, cost), not attempted
-  in this pass — logged here instead of silently dropped.
-
 - Open items from the LLM-pipeline verification methodology (see
   `docs/research/2026-09-02_llm_pipeline_verification_methodology.md`,
   written after the author pushed on prompt provenance/reproducibility for
@@ -54,6 +39,25 @@
   since it only depends on the `instructor`-patched client interface).
 ## Done
 
+- 2026-09-02 — Reproducibility verification (DAAF-inspired prospective
+  item): `GET /runs/{run_id}/reproducibility?compare_to={other_run_id}`
+  compares two runs sharing the same codebook/corpus/model and reports
+  whether the LLM's own output is stable — not correctness against gold,
+  just self-agreement. Reuses `agreement_report()` via a thin
+  `reproducibility_report()` relabeling wrapper (`validation.py`) rather
+  than new statistics code. Design-shaping discovery made along the way:
+  `run_extraction` caches by `(document, codebook_hash, model)`, so a
+  naive "run it again" would just replay the first run's cached answers —
+  `RunRecord` gained a persisted `bypass_cache` flag (persisted, not a
+  request-only parameter, since `run_extraction` runs as a disconnected
+  background task) to force a real second call to the provider. 6 new
+  tests, including one asserting the provider is actually called twice
+  when `bypass_cache=true` and only once when it's the default `false`.
+  Landed the same session as a peer's round-2 red-team pass on
+  `corpus_import.py`/`export.py`/`qualilab_interop.py` in this same
+  shared working directory — coordinated live (both sessions confirmed
+  exact line ranges before either touched `app.py`) to land without
+  overlapping edits; see commit `08693c7`'s message for the split.
 - 2026-09-02 — TXT/MD/DOCX/PDF corpus import (Slice 2 covered
   CSV/XLSX/pasted text only): `POST /corpora/documents`, a multi-file
   upload where each file is one document (unlike CSV/XLSX's one-row-is-
