@@ -4,7 +4,8 @@
     "tagline": "codebook-driven text coding",
     "nav": {
       "corpus": "Corpus",
-      "codebook": "Codebook"
+      "codebook": "Codebook",
+      "runs": "Runs"
     }
   },
   "corpus": {
@@ -40,6 +41,35 @@
     "createCodebook": "Create codebook",
     "yamlPreviewTitle": "YAML preview",
     "yamlEmpty": "Save a codebook to see its YAML here."
+  },
+  "runs": {
+    "listTitle": "Runs",
+    "newRun": "+ New run",
+    "none": "No runs yet.",
+    "corpus": "Corpus",
+    "codebook": "Codebook",
+    "selectCorpus": "Select a corpus...",
+    "selectCodebook": "Select a codebook...",
+    "model": "Model",
+    "providerMode": "Provider",
+    "providerApiKey": "API key (Anthropic)",
+    "providerCli": "CLI",
+    "cliCommand": "CLI command (e.g. claude -p)",
+    "cliPromptMode": "Prompt delivery",
+    "start": "Start run",
+    "inProgress": "Running...",
+    "runFailed": "This run failed to complete.",
+    "resultsTitle": "Results",
+    "filterByCategory": "Filter by category",
+    "allCategories": "All categories",
+    "exportCsv": "Export CSV",
+    "exportXlsx": "Export XLSX",
+    "exportJson": "Export JSON",
+    "colDocument": "Document",
+    "colCategory": "Category",
+    "colJustification": "Justification",
+    "edit": "Edit",
+    "save": "Save"
   },
   "errors": {
     "badRequest": "Invalid request",

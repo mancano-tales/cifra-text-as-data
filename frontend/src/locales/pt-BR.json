@@ -4,7 +4,8 @@
     "tagline": "codificação de texto guiada por codebook",
     "nav": {
       "corpus": "Corpus",
-      "codebook": "Codebook"
+      "codebook": "Codebook",
+      "runs": "Execuções"
     }
   },
   "corpus": {
@@ -40,6 +41,35 @@
     "createCodebook": "Criar codebook",
     "yamlPreviewTitle": "Pré-visualização YAML",
     "yamlEmpty": "Salve um codebook para ver o YAML aqui."
+  },
+  "runs": {
+    "listTitle": "Execuções",
+    "newRun": "+ Nova execução",
+    "none": "Nenhuma execução ainda.",
+    "corpus": "Corpus",
+    "codebook": "Codebook",
+    "selectCorpus": "Selecione um corpus...",
+    "selectCodebook": "Selecione um codebook...",
+    "model": "Modelo",
+    "providerMode": "Provedor",
+    "providerApiKey": "Chave de API (Anthropic)",
+    "providerCli": "CLI",
+    "cliCommand": "Comando CLI (ex: claude -p)",
+    "cliPromptMode": "Envio do prompt",
+    "start": "Iniciar execução",
+    "inProgress": "Executando...",
+    "runFailed": "Esta execução falhou.",
+    "resultsTitle": "Resultados",
+    "filterByCategory": "Filtrar por categoria",
+    "allCategories": "Todas as categorias",
+    "exportCsv": "Exportar CSV",
+    "exportXlsx": "Exportar XLSX",
+    "exportJson": "Exportar JSON",
+    "colDocument": "Documento",
+    "colCategory": "Categoria",
+    "colJustification": "Justificativa",
+    "edit": "Editar",
+    "save": "Salvar"
   },
   "errors": {
     "badRequest": "Requisição inválida",
