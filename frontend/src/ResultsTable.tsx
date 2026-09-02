@@ -1,0 +1,114 @@
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { exportRunUrl, updateExtraction } from "./api";
+import type { ExtractionResult } from "./api";
+
+interface ResultsTableProps {
+  runId: number;
+  results: ExtractionResult[];
+  codebookLabels: string[];
+  onResultsChange: (results: ExtractionResult[]) => void;
+  onError: (err: unknown) => void;
+}
+
+export function ResultsTable({ runId, results, codebookLabels, onResultsChange, onError }: ResultsTableProps) {
+  const { t } = useTranslation();
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editCategoria, setEditCategoria] = useState("");
+  const [editJustificativa, setEditJustificativa] = useState("");
+
+  function startEdit(row: ExtractionResult) {
+    setEditingId(row.id);
+    setEditCategoria(row.categoria);
+    setEditJustificativa(row.justificativa);
+  }
+
+  async function saveEdit(row: ExtractionResult) {
+    try {
+      const updated = await updateExtraction(runId, row.id, editCategoria, editJustificativa);
+      onResultsChange(results.map((r) => (r.id === row.id ? updated : r)));
+      setEditingId(null);
+    } catch (err) {
+      onError(err);
+    }
+  }
+
+  const filteredResults = categoryFilter ? results.filter((r) => r.categoria === categoryFilter) : results;
+
+  return (
+    <div>
+      <h3 className="card-title">{t("runs.resultsTitle")}</h3>
+      <div className="field">
+        <label className="field-label">{t("runs.filterByCategory")}</label>
+        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+          <option value="">{t("runs.allCategories")}</option>
+          {codebookLabels.map((label) => (
+            <option key={label} value={label}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="actions-row">
+        <a className="btn" href={exportRunUrl(runId, "csv")}>
+          {t("runs.exportCsv")}
+        </a>
+        <a className="btn" href={exportRunUrl(runId, "xlsx")}>
+          {t("runs.exportXlsx")}
+        </a>
+        <a className="btn" href={exportRunUrl(runId, "json")}>
+          {t("runs.exportJson")}
+        </a>
+      </div>
+      <table className="results-table">
+        <thead>
+          <tr>
+            <th>{t("runs.colDocument")}</th>
+            <th>{t("runs.colCategory")}</th>
+            <th>{t("runs.colJustification")}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredResults.map((row) => (
+            <tr key={row.id}>
+              <td>{row.document_snippet}</td>
+              <td>
+                {editingId === row.id ? (
+                  <select value={editCategoria} onChange={(e) => setEditCategoria(e.target.value)}>
+                    {codebookLabels.map((label) => (
+                      <option key={label} value={label}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="pill">{row.categoria}</span>
+                )}
+              </td>
+              <td>
+                {editingId === row.id ? (
+                  <textarea value={editJustificativa} onChange={(e) => setEditJustificativa(e.target.value)} />
+                ) : (
+                  row.justificativa
+                )}
+              </td>
+              <td>
+                {editingId === row.id ? (
+                  <button type="button" className="btn" onClick={() => saveEdit(row)}>
+                    {t("runs.save")}
+                  </button>
+                ) : (
+                  <button type="button" className="btn-danger-text" onClick={() => startEdit(row)}>
+                    {t("runs.edit")}
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
