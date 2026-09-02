@@ -23,6 +23,38 @@ class DocumentRecord(SQLModel, table=True):
     corpus_id: str
     text: str
     metadata_json: str = "{}"
+    # The source's own native document id (e.g. QualiLab's "doc-1"), so a
+    # later export can map an extraction back to the right document in a
+    # re-uploaded source file. None for CSV/XLSX/paste-imported documents,
+    # which have no such stable id to preserve. See
+    # docs/superpowers/specs/2026-09-02-qualilab-interop-design.md finding #1.
+    external_id: str | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class HumanLabelRecord(SQLModel, table=True):
+    """A human-coded gold label for one document, under one codebook.
+
+    Deliberately allows multiple rows per (document_id, codebook_id): a
+    QualiLab double-blind project produces one label per coder per
+    document, and collapsing that to a single "ground truth" at import
+    time would throw away real inter-rater information. The tradeoff this
+    creates -- validation.py's agreement_report() assumes exactly one gold
+    row per document -- is handled at the import boundary instead: the
+    default, recommended import path (QualiLab's "final" / team-
+    consolidated layer) is validated to contain at most one row per
+    document before being written here, so the common case stays safe by
+    construction. See the design spec's "Gold-standard reduction to one
+    row per document" section for the full reasoning."""
+
+    __tablename__ = "human_labels"
+
+    id: int | None = Field(default=None, primary_key=True)
+    document_id: int = Field(foreign_key="documents.id")
+    codebook_id: int = Field(foreign_key="codebooks.id")
+    category: str
+    coder: str  # QualiLab author_name/set_by, or "manual" for hand-entered labels
+    source: str = "manual"  # "qualilab_import" | "manual"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

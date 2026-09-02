@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from typing import Literal
 
@@ -10,11 +11,18 @@ from sqlmodel import Session, select
 
 from .codebook import spec_from_yaml_string, spec_to_yaml_string
 from .corpus_import import parse_csv_rows, parse_xlsx_rows
-from .db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord, get_engine
+from .db import CodebookRecord, DocumentRecord, ExtractionRecord, HumanLabelRecord, RunRecord, get_engine
 from .disclosure import build_disclosure
 from .export import results_to_csv_bytes, results_to_json_bytes, results_to_xlsx_bytes
 from .extraction import run_extraction
 from .providers import CliProvider, Provider, make_api_key_provider
+from .qualilab_interop import (
+    inject_extractions_into_qualilab,
+    open_qualilab_project,
+    qualilab_documents_to_records,
+    qualilab_doc_values_to_human_labels,
+    serialize_qualilab_project,
+)
 
 _EXPORT_CONTENT_TYPES = {
     "csv": "text/csv",
@@ -317,6 +325,156 @@ async def create_corpus_from_xlsx(
         raise HTTPException(status_code=400, detail=f"could not parse file as XLSX: {exc}") from exc
     texts = _rows_to_texts(rows, text_column)
     return _create_documents_or_409(engine, name, texts)
+
+
+def _create_document_records_or_409(engine, name: str, records: list[DocumentRecord]) -> dict:
+    """Sibling of `_create_documents_or_409` for sources that supply whole
+    `DocumentRecord`s (with `external_id` already set) rather than bare
+    strings -- currently only the QualiLab import path."""
+    with Session(engine, expire_on_commit=False) as session:
+        existing = session.exec(select(DocumentRecord).where(DocumentRecord.corpus_id == name)).first()
+        if existing is not None:
+            raise HTTPException(status_code=409, detail=f"corpus {name!r} already exists")
+
+        inserted = []
+        for record in records:
+            if record.text:
+                record.corpus_id = name
+                session.add(record)
+                inserted.append(record)
+        session.commit()
+        for record in inserted:
+            session.refresh(record)
+
+        return {
+            "corpus_id": name,
+            "document_count": len(inserted),
+            "documents": [{"id": r.id, "external_id": r.external_id} for r in inserted],
+        }
+
+
+@app.post("/corpora/import-qualilab")
+async def create_corpus_from_qualilab(
+    name: str = Form(...), file: UploadFile = File(...), engine=Depends(get_engine_dependency)
+):
+    content = await file.read()
+    try:
+        project = open_qualilab_project(content)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    records = qualilab_documents_to_records(project, corpus_id=name)
+    return _create_document_records_or_409(engine, name, records)
+
+
+@app.post("/corpora/{corpus_id}/import-qualilab-labels")
+async def import_qualilab_labels(
+    corpus_id: str,
+    codebook_id: int = Form(...),
+    category_id: str = Form(...),
+    value_mapping: str = Form(...),  # JSON object, QualiLab option text -> codebook category label
+    layer: str = Form("final"),
+    file: UploadFile = File(...),
+    engine=Depends(get_engine_dependency),
+):
+    content = await file.read()
+    try:
+        project = open_qualilab_project(content)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    try:
+        parsed_mapping = json.loads(value_mapping)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail=f"value_mapping is not valid JSON: {exc}") from exc
+
+    with Session(engine) as session:
+        codebook = session.get(CodebookRecord, codebook_id)
+        if codebook is None:
+            raise HTTPException(status_code=404, detail=f"codebook {codebook_id} not found")
+        valid_categories = {c["label"] for c in spec_from_yaml_string(codebook.yaml_raw)["categories"]}
+
+        documents = session.exec(select(DocumentRecord).where(DocumentRecord.corpus_id == corpus_id)).all()
+        if not documents:
+            raise HTTPException(status_code=404, detail=f"corpus {corpus_id!r} not found")
+
+        try:
+            result = qualilab_doc_values_to_human_labels(
+                project,
+                category_id=category_id,
+                codebook_id=codebook_id,
+                documents=documents,
+                value_mapping=parsed_mapping,
+                valid_categories=valid_categories,
+                layer=layer,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        if not result.ok:
+            raise HTTPException(
+                status_code=422,
+                detail={"message": "one or more doc_values could not be mapped to a codebook category", "problems": result.rejected},
+            )
+
+        for label in result.accepted:
+            session.add(label)
+        session.commit()
+
+        return {"created_count": len(result.accepted), "coverage": result.coverage}
+
+
+@app.post("/runs/{run_id}/export-qualilab")
+async def export_run_to_qualilab(
+    run_id: int,
+    category_id: str = Form(...),
+    reverse_value_mapping: str = Form(...),  # JSON object, codebook category label -> QualiLab option text
+    file: UploadFile = File(...),
+    engine=Depends(get_engine_dependency),
+):
+    content = await file.read()
+    try:
+        project = open_qualilab_project(content)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    try:
+        parsed_mapping = json.loads(reverse_value_mapping)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail=f"reverse_value_mapping is not valid JSON: {exc}") from exc
+
+    with Session(engine) as session:
+        run = session.get(RunRecord, run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"run {run_id} not found")
+
+        extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
+        documents = session.exec(select(DocumentRecord).where(DocumentRecord.corpus_id == run.corpus_id)).all()
+
+        try:
+            result = inject_extractions_into_qualilab(
+                project,
+                extractions=extractions,
+                documents=documents,
+                category_id=category_id,
+                reverse_value_mapping=parsed_mapping,
+                run_id=run_id,
+                model_label=run.model,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    output = serialize_qualilab_project(content, result.project)
+    media_type = "application/zip" if content[:2] == b"PK" else "application/json"
+    return Response(
+        content=output,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="run_{run_id}_export.qualilab"',
+            "X-Cifra-Matched-Count": str(result.matched_count),
+            "X-Cifra-Skipped-Count": str(result.skipped_count),
+        },
+    )
 
 
 @app.get("/corpora")

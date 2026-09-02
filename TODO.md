@@ -6,11 +6,15 @@
   metric `agreement_report()` already computes) surfaced in the UI,
   category-level precision/recall/F1, and a disagreement-review list.
   Gets its own spec/plan per `AGENTS.md` § "Build order for the MVP".
-  Note (2026-09-02): another session is designing a richer `human_labels`
-  table shape as part of QualiLab interop (importing QualiLab doc_values
-  as gold labels) — check what landed there before assuming AGENTS.md's
-  original single-category/single-coder sketch is still the shape to
-  build against.
+  Note (2026-09-02, updated): `HumanLabelRecord` has landed (QualiLab
+  interop, below) — multiple rows allowed per `(document_id,
+  codebook_id)`, distinguished by `coder`/`source`. `agreement_report()`
+  needs exactly one gold row per document; the safe default is filtering
+  to `source="qualilab_import"` rows imported with `layer="final"` (import
+  already rejects a file with >1 "final" row per document, so that subset
+  is guaranteed unique per document) or `source="manual"` rows from a
+  plain-CSV gold import, not blindly passing every row for a codebook
+  straight into the merge.
 - TXT/DOCX/PDF corpus import (Slice 2 covered CSV/XLSX/pasted text only).
 
 ## Prospective
@@ -50,32 +54,37 @@
 - Support LLM providers beyond OpenAI in `examples/` (instructor supports
   multiple providers already; the core `extraction.py` is provider-agnostic
   since it only depends on the `instructor`-patched client interface).
-- **QualiLab interoperability — treat as a real priority, not a someday
-  nice-to-have (author's emphasis, 2026-09-02).** Without it, Cifra and
-  QualiLab stay two disconnected silos that both happen to call LLMs for
-  coding, each rebuilding what the other already has (QualiLab: mature
-  manual review, redaction, reconciliation, blind-evaluation UI; Cifra:
-  unattended batch execution, cache, Cohen's kappa/precision/recall
-  validation). Interop is what lets a researcher use both on the *same*
-  project instead of picking one and losing the other's strengths — it is
-  the concrete answer to "why build another tool" rather than a footnote.
-  Any future slice that touches corpus import or the results/extractions
-  data model should check whether it can be designed to also serve this,
-  before that door closes by accident.
-  Scope: import a `.qualilab` project as a corpus source (its
-  `documents`, optionally its existing `codes`/`doc_values` as context)
-  and export Cifra's automated extractions back into the same format, as
-  a coding layer clearly marked "AI, unattended" and distinct from
-  QualiLab's human-authored layers — so a researcher can round-trip
-  between automated coding here and manual review/reconciliation in
-  QualiLab. The goal is interop through the open `.qualilab` file format,
-  not a shared codebase: see `AGENTS.md` § "Why not a single-file HTML
-  tool like QualiLab" (2026-09-01 correction) for why building Cifra's
-  features inside QualiLab's own codebase was ruled out — the author's
-  README explicitly rejects a plugin architecture as incompatible with its
-  single-file design.
-
 ## Done
+
+- 2026-09-02 — QualiLab interoperability: `POST /corpora/import-qualilab`
+  (import a `.qualilab` project's documents as a corpus, preserving
+  QualiLab's own doc id as the new `DocumentRecord.external_id`),
+  `POST /corpora/{corpus_id}/import-qualilab-labels` (map `doc_values` to
+  `HumanLabelRecord` gold labels via a required, explicit
+  `value_mapping` — all-or-nothing on mapping validity, reports
+  `coverage` for documents with no recorded value), and
+  `POST /runs/{run_id}/export-qualilab` (inject a run's extractions back
+  into a freshly re-uploaded `.qualilab` file as new `doc_values`, never
+  a cached copy — matches by `external_id`, upserts by a deterministic id
+  so re-exporting the same run doesn't duplicate). New
+  `qualilab_interop.py` module (`open_qualilab_project`,
+  `qualilab_documents_to_records`, `qualilab_doc_values_to_human_labels`,
+  `inject_extractions_into_qualilab`, `serialize_qualilab_project`).
+  New `HumanLabelRecord` table, deliberately multi-row per document (see
+  the Validation screen note above for how that interacts with
+  `agreement_report()`). Implements
+  `docs/superpowers/specs/2026-09-02-qualilab-interop-design.md`
+  (revision 4, 18 numbered findings across 3 red-team rounds) as written,
+  including its two hardest-won details: the zip-bomb guard via
+  `ZipInfo.file_size` checked before any `read()`, and the upsert-not-
+  append fix for finding #13 (three independent reviewers across two
+  model families caught that an earlier revision's "idempotent re-export"
+  claim wasn't actually implemented). Tested against a copy of QualiLab's
+  own shipped example fixture (`tests/fixtures/`, MIT), not synthetic
+  mocks, for every behavior where the real file's shape matters — this is
+  what caught the real "final" vs. "individual" layer counts used in the
+  test assertions. 26 new tests, 126/126 passing (pilot_v7's CLI-dependent
+  tests excluded from that count, unaffected).
 
 - 2026-09-02 — CI: `.github/workflows/ci.yml`, two jobs on every push and
   every PR into main — `backend` (Python 3.12, `pip install -e ".[dev]"`,
