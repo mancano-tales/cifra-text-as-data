@@ -4,10 +4,11 @@ import json
 from datetime import datetime
 from typing import Literal
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Response, UploadFile
+import pandas as pd
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 from .codebook import spec_from_yaml_string, spec_to_yaml_string
 from .corpus_import import parse_csv_rows, parse_docx_bytes, parse_pdf_bytes, parse_txt_bytes, parse_xlsx_rows
@@ -16,6 +17,7 @@ from .disclosure import build_disclosure
 from .export import results_to_csv_bytes, results_to_json_bytes, results_to_xlsx_bytes
 from .extraction import run_extraction
 from .providers import CliProvider, Provider, make_api_key_provider
+from .validation import reproducibility_report
 from .qualilab_interop import (
     inject_extractions_into_qualilab,
     open_qualilab_project,
@@ -64,6 +66,10 @@ class CreateRunRequest(BaseModel):
     provider_mode: Literal["api_key", "cli"] = "api_key"
     cli_command: list[str] | None = None
     cli_prompt_mode: Literal["stdin", "arg"] = "stdin"
+    # Set true to verify reproducibility: re-run against the same
+    # codebook/corpus/model as an earlier run without serving that run's
+    # cached extractions back. See GET /runs/{run_id}/reproducibility.
+    bypass_cache: bool = False
 
 
 _MODEL_PREFIX_TO_VENDOR = {
@@ -162,6 +168,7 @@ def create_run(
             model=request.model,
             provider_mode=request.provider_mode,
             provider_detail=provider_detail,
+            bypass_cache=request.bypass_cache,
         )
         session.add(run)
         session.commit()
@@ -294,6 +301,55 @@ def get_run_disclosure(run_id: int, engine=Depends(get_engine_dependency)):
         return build_disclosure(session, run)
 
 
+@app.get("/runs/{run_id}/reproducibility")
+def get_run_reproducibility(run_id: int, compare_to: int, engine=Depends(get_engine_dependency)):
+    """Compare two completed runs against each other to measure whether
+    the pipeline's own output is reproducible -- same codebook/corpus/
+    model, does the LLM say the same thing twice? `compare_to` is
+    typically a second run created with `bypass_cache: true` against the
+    same config as `run_id`, so it actually re-queries the provider
+    instead of replaying `run_id`'s cached answers back at itself."""
+    with Session(engine) as session:
+        run_a = session.get(RunRecord, run_id)
+        if run_a is None:
+            raise HTTPException(status_code=404, detail=f"run {run_id} not found")
+        run_b = session.get(RunRecord, compare_to)
+        if run_b is None:
+            raise HTTPException(status_code=404, detail=f"run {compare_to} not found")
+
+        if (run_a.codebook_id, run_a.corpus_id, run_a.model) != (run_b.codebook_id, run_b.corpus_id, run_b.model):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"runs {run_id} and {compare_to} aren't a same-configuration repeat "
+                    "(codebook_id, corpus_id, and model must all match) -- comparing them would "
+                    "measure 'are these two different setups different', not reproducibility"
+                ),
+            )
+        if run_a.codebook_yaml_hash and run_b.codebook_yaml_hash and run_a.codebook_yaml_hash != run_b.codebook_yaml_hash:
+            raise HTTPException(
+                status_code=422,
+                detail=f"runs {run_id} and {compare_to} used different codebook content -- "
+                "the codebook was edited in place between them",
+            )
+
+        extractions_a = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
+        extractions_b = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == compare_to)).all()
+
+    if not extractions_a or not extractions_b:
+        raise HTTPException(status_code=422, detail="both runs must have at least one extraction to compare")
+
+    df_a = pd.DataFrame([{"document_id": e.document_id, "categoria": e.categoria} for e in extractions_a])
+    df_b = pd.DataFrame([{"document_id": e.document_id, "categoria": e.categoria} for e in extractions_b])
+
+    try:
+        report = reproducibility_report(df_a, df_b, id_col="document_id", columns=["categoria"])
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return {"run_a": run_id, "run_b": compare_to, **report}
+
+
 class PasteCorpusRequest(BaseModel):
     name: str
     text: str
@@ -310,6 +366,17 @@ def _create_documents_or_409(engine, name: str, texts: list[str]) -> dict:
             if text:
                 session.add(DocumentRecord(corpus_id=name, text=text))
                 inserted += 1
+        if inserted == 0:
+            # Every text was empty (e.g. a CSV/XLSX whose text_column was
+            # blank on every row). Without this, the request "succeeds"
+            # with document_count: 0 -- but since a corpus is defined
+            # purely by having DocumentRecord rows with this corpus_id
+            # (there's no separate corpora table), that "success" creates
+            # nothing: GET /corpora won't list it, GET
+            # /corpora/{id}/documents 404s, and POST /runs 404s too. A
+            # 200 claiming success for an operation that had no effect is
+            # worse than a clear rejection upfront.
+            raise HTTPException(status_code=400, detail="every row/text was empty -- no documents to import")
         session.commit()
 
     return {"corpus_id": name, "document_count": inserted}
@@ -324,11 +391,24 @@ def _rows_to_texts(rows: list[dict], text_column: str) -> list[str]:
     if not rows:
         raise HTTPException(status_code=400, detail="file has no data rows")
     if text_column not in rows[0]:
+        # csv.DictReader collects any columns beyond the header count under
+        # a `None` key (its `restkey`, for a data row with more fields than
+        # the header) -- sorting a mix of `str` and `None` raises a raw
+        # TypeError instead of this 422, so `None` is filtered out here.
+        available = sorted(k for k in rows[0].keys() if k is not None)
         raise HTTPException(
             status_code=422,
-            detail=f"column {text_column!r} not found; available columns: {sorted(rows[0].keys())}",
+            detail=f"column {text_column!r} not found; available columns: {available}",
         )
-    return [str(row[text_column]) for row in rows if row.get(text_column)]
+    # `is not None` and a stripped non-empty check, not bare truthiness --
+    # `row.get(text_column)` is falsy for a legitimate numeric `0`/`0.0`
+    # cell (openpyxl returns XLSX numeric cells as int/float, not str),
+    # and a bare `if row.get(text_column)` silently dropped those rows.
+    return [
+        str(row[text_column])
+        for row in rows
+        if row.get(text_column) is not None and str(row[text_column]).strip() != ""
+    ]
 
 
 @app.post("/corpora/csv")
@@ -422,6 +502,13 @@ def _create_document_records_or_409(engine, name: str, records: list[DocumentRec
                 record.corpus_id = name
                 session.add(record)
                 inserted.append(record)
+        if not inserted:
+            # Same reasoning as _create_documents_or_409: with no separate
+            # corpora table, a 0-document "success" here creates a corpus
+            # name that's invisible everywhere else (GET /corpora, POST
+            # /runs) -- e.g. every uploaded file was blank, or a QualiLab
+            # project's documents[] all had empty content.
+            raise HTTPException(status_code=400, detail="every document was empty -- no documents to import")
         session.commit()
         for record in inserted:
             session.refresh(record)
@@ -447,6 +534,24 @@ async def create_corpus_from_qualilab(
     return _create_document_records_or_409(engine, name, records)
 
 
+def _parse_json_object_form_field(field_name: str, raw: str) -> dict:
+    """Parse a form field expected to be a JSON object (e.g.
+    value_mapping/reverse_value_mapping), rejecting anything that parses
+    as valid JSON but isn't an object -- `json.loads("[1,2,3]")` or
+    `json.loads("true")` succeed without raising, and the caller
+    immediately does `.get(...)` on the result, which would otherwise
+    raise a raw AttributeError instead of a clean 400."""
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail=f"{field_name} is not valid JSON: {exc}") from exc
+    if not isinstance(parsed, dict):
+        raise HTTPException(
+            status_code=400, detail=f"{field_name} must be a JSON object, got {type(parsed).__name__}"
+        )
+    return parsed
+
+
 @app.post("/corpora/{corpus_id}/import-qualilab-labels")
 async def import_qualilab_labels(
     corpus_id: str,
@@ -463,10 +568,7 @@ async def import_qualilab_labels(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    try:
-        parsed_mapping = json.loads(value_mapping)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=400, detail=f"value_mapping is not valid JSON: {exc}") from exc
+    parsed_mapping = _parse_json_object_form_field("value_mapping", value_mapping)
 
     with Session(engine) as session:
         codebook = session.get(CodebookRecord, codebook_id)
@@ -497,6 +599,20 @@ async def import_qualilab_labels(
                 detail={"message": "one or more doc_values could not be mapped to a codebook category", "problems": result.rejected},
             )
 
+        # Replace, not append: re-running this same import (e.g. after
+        # fixing a mismapped value in the .qualilab file) would otherwise
+        # insert a second HumanLabelRecord for every document already
+        # imported under this (codebook_id, layer), silently violating
+        # agreement_report()'s one-gold-row-per-document precondition.
+        accepted_document_ids = {label.document_id for label in result.accepted}
+        if accepted_document_ids:
+            session.exec(
+                delete(HumanLabelRecord).where(
+                    HumanLabelRecord.codebook_id == codebook_id,
+                    HumanLabelRecord.layer == layer,
+                    HumanLabelRecord.document_id.in_(accepted_document_ids),
+                )
+            )
         for label in result.accepted:
             session.add(label)
         session.commit()
@@ -518,10 +634,7 @@ async def export_run_to_qualilab(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    try:
-        parsed_mapping = json.loads(reverse_value_mapping)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=400, detail=f"reverse_value_mapping is not valid JSON: {exc}") from exc
+    parsed_mapping = _parse_json_object_form_field("reverse_value_mapping", reverse_value_mapping)
 
     with Session(engine) as session:
         run = session.get(RunRecord, run_id)
@@ -574,7 +687,10 @@ def list_corpora(engine=Depends(get_engine_dependency)):
 
 @app.get("/corpora/{corpus_id}/documents")
 def list_corpus_documents(
-    corpus_id: str, limit: int = 50, offset: int = 0, engine=Depends(get_engine_dependency)
+    corpus_id: str,
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    engine=Depends(get_engine_dependency),
 ):
     with Session(engine) as session:
         total = len(session.exec(select(DocumentRecord).where(DocumentRecord.corpus_id == corpus_id)).all())

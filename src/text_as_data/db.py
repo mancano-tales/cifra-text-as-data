@@ -55,6 +55,11 @@ class HumanLabelRecord(SQLModel, table=True):
     category: str
     coder: str  # QualiLab author_name/set_by, or "manual" for hand-entered labels
     source: str = "manual"  # "qualilab_import" | "manual"
+    # QualiLab's own "final" (team-consolidated) vs "individual" (one row
+    # per rater) layer, preserved rather than dropped at import -- without
+    # it there's no way to later distinguish a multi-coder gold set from a
+    # single consolidated one once both are sitting in the same table.
+    layer: str = "final"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -81,6 +86,16 @@ class RunRecord(SQLModel, table=True):
     # silently reuse cached extractions produced under the codebook's
     # *previous* definition instead of re-querying the LLM.
     codebook_yaml_hash: str = ""
+    # When true, run_extraction never serves a cached extraction for this
+    # run, even if one exists for the same (document, codebook_hash,
+    # model) -- persisted here (not just a request-time parameter) because
+    # run_extraction runs as a background task, decoupled from the
+    # original HTTP request, and reads everything it needs off the
+    # RunRecord itself. Exists for reproducibility verification: comparing
+    # a run against a same-config repeat is meaningless if the "repeat"
+    # just replays the first run's cached answers instead of asking the
+    # LLM again.
+    bypass_cache: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

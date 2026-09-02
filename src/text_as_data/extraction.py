@@ -85,28 +85,35 @@ def run_extraction(engine, run_id: int, provider: Provider) -> None:
             ).all()
 
             for document in documents:
-                cached = session.exec(
-                    select(ExtractionRecord)
-                    .join(RunRecord, ExtractionRecord.run_id == RunRecord.id)
-                    .where(
-                        ExtractionRecord.document_id == document.id,
-                        # Matching on the codebook's actual content hash,
-                        # not codebook_id alone -- a codebook can be
-                        # edited in place (same id, new yaml_raw), and a
-                        # cache hit keyed only on the id would silently
-                        # reuse extractions produced under the *old*
-                        # definition. RunRecord.codebook_id is still
-                        # required in the join so an unrelated codebook
-                        # that happens to hash-collide (practically
-                        # impossible with sha256, but free to assert)
-                        # can never match.
-                        RunRecord.codebook_id == run.codebook_id,
-                        RunRecord.codebook_yaml_hash == codebook_yaml_hash,
-                        RunRecord.model == run.model,
-                        ExtractionRecord.categoria != ERROR_CATEGORIA,
-                    )
-                    .order_by(ExtractionRecord.id.desc())
-                ).first()
+                # A reproducibility-verification run (bypass_cache=True)
+                # must never see a cached hit -- serving a prior run's
+                # cached answer back would make "run it again" always
+                # agree with itself by construction, defeating the whole
+                # point of testing whether the LLM's own output is stable.
+                cached = None
+                if not run.bypass_cache:
+                    cached = session.exec(
+                        select(ExtractionRecord)
+                        .join(RunRecord, ExtractionRecord.run_id == RunRecord.id)
+                        .where(
+                            ExtractionRecord.document_id == document.id,
+                            # Matching on the codebook's actual content hash,
+                            # not codebook_id alone -- a codebook can be
+                            # edited in place (same id, new yaml_raw), and a
+                            # cache hit keyed only on the id would silently
+                            # reuse extractions produced under the *old*
+                            # definition. RunRecord.codebook_id is still
+                            # required in the join so an unrelated codebook
+                            # that happens to hash-collide (practically
+                            # impossible with sha256, but free to assert)
+                            # can never match.
+                            RunRecord.codebook_id == run.codebook_id,
+                            RunRecord.codebook_yaml_hash == codebook_yaml_hash,
+                            RunRecord.model == run.model,
+                            ExtractionRecord.categoria != ERROR_CATEGORIA,
+                        )
+                        .order_by(ExtractionRecord.id.desc())
+                    ).first()
 
                 if cached is not None:
                     categoria, justificativa, trecho = (

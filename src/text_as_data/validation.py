@@ -83,3 +83,30 @@ def agreement_report(
             )
 
     return {"per_column": per_column, "mismatches": mismatches}
+
+
+def reproducibility_report(
+    run_a: pd.DataFrame,
+    run_b: pd.DataFrame,
+    id_col: str = "document_id",
+    columns: list[str] | None = None,
+) -> dict:
+    """Compare two runs of the *same* codebook+model+corpus against each
+    other, to measure whether the pipeline's own output is stable -- not
+    whether it's correct (there is no gold label here, just two answers to
+    the same question).
+
+    A thin relabeling of `agreement_report()`: the statistics for "does A
+    match B" are identical whether B is a human gold label or a second LLM
+    run, so this reuses that function's merge/accuracy/kappa/precision/
+    recall/mismatch logic rather than re-implementing it, and only renames
+    the "predicted"/"gold" keys to the more accurate "run_a"/"run_b" for a
+    comparison where neither side is the ground truth.
+    """
+    result = agreement_report(run_a, run_b, id_col=id_col, columns=columns)
+    for stats in result["per_column"].values():
+        stats["exact_match_rate"] = stats.pop("accuracy")
+    for mismatch in result["mismatches"]:
+        mismatch["run_a"] = mismatch.pop("predicted")
+        mismatch["run_b"] = mismatch.pop("gold")
+    return result
