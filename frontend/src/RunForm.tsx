@@ -7,7 +7,7 @@ import type { CodebookSummary, CorpusSummary } from "./api";
 interface RunFormProps {
   corpora: CorpusSummary[];
   codebooks: CodebookSummary[];
-  onCreated: (runId: number) => void;
+  onCreated: (runId: number) => Promise<void>;
   onError: (err: unknown) => void;
 }
 
@@ -22,17 +22,25 @@ export function RunForm({ corpora, codebooks, onCreated, onError }: RunFormProps
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    const trimmedModel = model.trim();
+    if (!trimmedModel) {
+      onError(new Error("Model cannot be empty."));
+      return;
+    }
+    const commandParts = cliCommand.split(" ").filter(Boolean);
+    if (providerMode === "cli" && commandParts.length === 0) {
+      onError(new Error("CLI command cannot be empty."));
+      return;
+    }
     try {
       const { run_id } = await createRun({
         codebook_id: Number(codebookId),
         corpus_id: corpusId,
-        model,
+        model: trimmedModel,
         provider_mode: providerMode,
-        ...(providerMode === "cli"
-          ? { cli_command: cliCommand.split(" ").filter(Boolean), cli_prompt_mode: cliPromptMode }
-          : {}),
+        ...(providerMode === "cli" ? { cli_command: commandParts, cli_prompt_mode: cliPromptMode } : {}),
       });
-      onCreated(run_id);
+      await onCreated(run_id);
     } catch (err) {
       onError(err);
     }

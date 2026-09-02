@@ -22,6 +22,16 @@ export function RunsPage() {
   const shownError = error ? describeApiError(error, t) : null;
 
   const pollRef = useRef<number | null>(null);
+  // Guards against two classes of stale-async-response bugs: (a) a
+  // request started before the component unmounted resolving after (and
+  // trying to setState / start a new interval on a dead component); (b)
+  // the user selecting a different run while a request for the
+  // previously-selected one is still in flight, whose response would
+  // otherwise land on top of the newly-selected run's UI. Every
+  // selection bumps the token; a resolved request only applies its
+  // result if the token it was issued under still matches.
+  const isMountedRef = useRef(true);
+  const selectionTokenRef = useRef(0);
 
   async function refreshRuns() {
     try {
@@ -42,9 +52,11 @@ export function RunsPage() {
   }
 
   useEffect(() => {
+    isMountedRef.current = true;
     refreshRuns();
     loadFormOptions();
     return () => {
+      isMountedRef.current = false;
       if (pollRef.current) window.clearInterval(pollRef.current);
     };
   }, []);
@@ -56,53 +68,68 @@ export function RunsPage() {
     }
   }
 
-  async function loadRunDetail(runId: number, codebookId: number) {
+  function isStale(token: number): boolean {
+    return !isMountedRef.current || token !== selectionTokenRef.current;
+  }
+
+  async function loadRunDetail(runId: number, codebookId: number, token: number) {
     try {
       const status = await getRun(runId);
+      if (isStale(token)) return;
       setSelectedStatus(status);
 
       if (ACTIVE_STATUSES.has(status.status)) {
         if (!pollRef.current) {
-          pollRef.current = window.setInterval(() => loadRunDetail(runId, codebookId), 2000);
+          pollRef.current = window.setInterval(() => loadRunDetail(runId, codebookId, token), 2000);
         }
         return;
       }
 
       stopPolling();
       await refreshRuns();
+      if (isStale(token)) return;
 
       if (status.status === "done") {
         const [rows, codebookDetail] = await Promise.all([getRunResults(runId), getCodebook(codebookId)]);
+        if (isStale(token)) return;
         setResults(rows);
         setCodebookLabels(codebookDetail.spec.categories.map((c) => c.label));
       }
     } catch (err) {
       stopPolling();
-      setError(err);
+      if (!isStale(token)) setError(err);
     }
   }
 
   function selectRun(run: RunSummary) {
     setError(null);
     stopPolling();
+    selectionTokenRef.current += 1;
+    const token = selectionTokenRef.current;
     setSelectedRunId(run.id);
     setResults(null);
     setCodebookLabels([]);
-    loadRunDetail(run.id, run.codebook_id);
+    loadRunDetail(run.id, run.codebook_id, token);
   }
 
   function startNewRun() {
     setError(null);
     stopPolling();
+    selectionTokenRef.current += 1;
     setSelectedRunId(null);
     setSelectedStatus(null);
     setResults(null);
   }
 
   async function handleCreated(runId: number) {
-    await refreshRuns();
-    const run = (await listRuns()).find((r) => r.id === runId);
-    if (run) selectRun(run);
+    try {
+      const runList = await listRuns();
+      setRuns(runList);
+      const run = runList.find((r) => r.id === runId);
+      if (run) selectRun(run);
+    } catch (err) {
+      setError(err);
+    }
   }
 
   return (

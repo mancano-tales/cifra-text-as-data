@@ -28,7 +28,11 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
     try {
       const updated = await updateExtraction(runId, row.id, editCategoria, editJustificativa);
       onResultsChange(results.map((r) => (r.id === row.id ? updated : r)));
-      setEditingId(null);
+      // Only clear the edit UI if the user is still editing this same row --
+      // if they've since clicked "Edit" on a different row while this save
+      // was in flight, clearing unconditionally would wipe that row's
+      // in-progress (unsaved) edit instead.
+      setEditingId((current) => (current === row.id ? null : current));
     } catch (err) {
       onError(err);
     }
