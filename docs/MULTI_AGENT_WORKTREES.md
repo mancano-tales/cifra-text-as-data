@@ -67,22 +67,33 @@ Two practical paths:
 
 ## Known friction: `pip install -e .` is a global pointer, not per-directory
 
-There is no per-worktree Python virtual environment set up by default in
-this repo. `pip install -e .` registers the *currently active* checkout's
-`src/` as the editable install for the **entire** Python environment on
-this machine — running it from one worktree silently repoints
-`import text_as_data` for every other worktree and the main checkout too.
-A session running tests right after another session ran `pip install -e .`
-from a different worktree may see confusing, unrelated failures that have
-nothing to do with its own changes.
+**This has already caused a real, confusing failure (2026-09-02) — not
+just a theoretical risk.** A worktree isolates the filesystem and git
+state, but not a shared global Python environment. One session ran
+`pip install -e .` from its own worktree; another session's `pytest` run,
+already in progress in a *different* worktree, silently started running
+against the first worktree's `providers.py` instead of its own —
+surfacing as an `AttributeError` on a class attribute that only existed in
+the other worktree's version of the file. Nothing about that failure
+pointed at "wrong environment" on its face; it read like a real code bug.
 
-**Correct fix, not yet set up as of this writing**: a dedicated virtual
-environment per worktree (`python -m venv .venv` inside each worktree,
-then `pip install -e ".[dev]"` inside that venv) fully isolates this.
-Until that's standard practice here, at minimum: if tests fail in a way
-that doesn't match what you changed, re-run `pip install -e ".[dev]"` from
-your own directory before assuming your code is broken — you may just be
-pointed at a different worktree's `src/`.
+**Do this per worktree, not just when something looks broken**:
+
+```bash
+cd ../text-as-data-<short-name>
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+# source .venv/bin/activate   # macOS/Linux
+pip install -e ".[dev]"
+```
+
+Every subsequent `pytest`/`python` invocation in that worktree should go
+through this venv (activate it per shell, or call
+`.venv\Scripts\python.exe`/`.venv/bin/python` directly). This is not
+optional hardening — treat "no venv yet" as leaving this exact bug latent,
+not as a minor inconvenience. If a test failure doesn't match anything
+you changed, suspect this before suspecting your own code — but the venv
+is what actually prevents it, not vigilance after the fact.
 
 ## What the guard hook does and does not add on top of this
 
