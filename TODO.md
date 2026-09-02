@@ -14,29 +14,6 @@
 - TXT/DOCX/PDF corpus import (Slice 2 covered CSV/XLSX/pasted text only).
 - CI (lint + test on push) — not set up yet; add once the package has a
   real consumer.
-- Enrich the V7 Bayesian pilot codebooks (`write_codebook_yaml` in
-  `scripts/import_v7_pilot.py` and `scripts/run_v7_candidates_via_agy.py`)
-  before treating any provider's output as validation-ready. They
-  currently pass only `label`+`definition` per verbal-probability
-  category — no `boundary_notes`, no positive/negative examples, no
-  explicit instruction to weigh discriminating power (how much *less*
-  likely under the rival hypothesis, not just "does this fit"). Running
-  16 real candidate evaluations through `agy` (Google Antigravity CLI,
-  Gemini) surfaced exactly the failure modes an under-specified codebook
-  predicts: both sides of a pair scored `muito_provavel` in 6/16
-  evaluations (~0 discriminating power, 4 of them in H3 alone); a scope
-  condition ignored outright (H3a, "ideological preference for private
-  provision," specifically theorizes right-wing/market-aligned parties —
-  scored `muito_provavel` for a 2004 Lula/PT-government policy anyway);
-  and inconsistent treatment of near-identical evidence (Fies
-  retrenchment coded `muito_improvavel` for H1b in 2015/2016 but
-  `muito_provavel` in 2017, no stable rule between the two readings).
-  Per the author's explicit call (2026-09-01): treat this as a
-  prompt/codebook specification gap to fix, not a signal to swap
-  providers — see `AGENTS.md` § "Why the validation step is not
-  optional" for why under-specified codebooks are expected to produce
-  exactly this pattern regardless of which model runs them.
-
 ## Prospective
 
 - Support LLM providers beyond OpenAI in `examples/` (instructor supports
@@ -69,6 +46,26 @@
 
 ## Done
 
+- 2026-09-02 — Enriched the V7 Bayesian pilot codebooks and confirmed the
+  fix with real data: added `HYPOTHESIS_DEFINITIONS` (full mechanism +
+  premises per side, not just the hypothesis name) and
+  `PROBABILITY_BOUNDARY_NOTES` (scope-check / discriminating-power /
+  consistency instructions per category) to `pilot_v7.py`
+  (`build_enriched_hypothesis_codebook_spec`), then re-ran the identical
+  16 evaluations through the identical `agy`/Gemini with nothing else
+  changed. Non-discriminating cases (both sides of a pair scored
+  `muito_provavel`) went from 6/16 to 0/16; the `muito_provavel` bias
+  dropped from 66% to 28% of outputs; the flagged scope-condition failure
+  (H3a scored `muito_provavel` for a left-wing government's policy)
+  flipped to `quase_impossivel`, with the model's own justification now
+  naming the governing party and calling it a "hoop test failure" in
+  Fairfield & Charman's own terms. Confirms the author's diagnosis: this
+  was a codebook-specification gap, not a model/provider reliability
+  problem — see the project memory note on diagnosing prompt before model
+  for the durable lesson. Every spreadsheet export from this pilot
+  (`scripts/run_v7_candidates_via_agy.py`) now also carries the complete
+  hypothesis definition and complete evidence text per row, not just a
+  short justificativa, per the author's explicit requirement.
 - 2026-09-02 — Slice 3, Runs + Results screen: a "Runs" tab (list +
   detail: create a run in API-key or CLI mode, live progress polling,
   results table with category filter, inline categoria/justificativa
