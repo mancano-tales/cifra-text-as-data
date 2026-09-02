@@ -14,6 +14,19 @@
 - TXT/DOCX/PDF corpus import (Slice 2 covered CSV/XLSX/pasted text only).
 - CI (lint + test on push) — not set up yet; add once the package has a
   real consumer.
+- No schema migration tooling — `SQLModel.metadata.create_all()` only
+  creates missing tables, never alters an existing one. This has now bitten
+  the shared local `codifica.sqlite` twice (`documents.created_at` in
+  Slice 2, `extractions.prompt_sent`/`raw_response` on 2026-09-02, the
+  second one discovered because it 500'd `GET /runs` for a live session)
+  — both fixed by hand with an additive `ALTER TABLE ... ADD COLUMN`
+  against the live file, not by regenerating it (see NEWS.md 2026-09-02
+  (3) for the exact fix). Worth either a lightweight startup check
+  (compare `PRAGMA table_info` against the SQLModel schema, auto-add
+  missing nullable/defaulted columns) or adopting Alembic once the schema
+  churns less — before every future column addition means hunting down
+  and manually patching whichever `codifica.sqlite` files happen to be
+  live at the time.
 
 ## Prospective
 

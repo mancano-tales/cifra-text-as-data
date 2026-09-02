@@ -1,5 +1,37 @@
 # NEWS
 
+## 2026-09-02 (3)
+
+- Red-teamed Slice 3 with two independent `agy`-driven adversarial reviews
+  (one against the new backend endpoints/export.py, one against
+  RunForm/ResultsTable/RunsPage), each in read-only mode against the real
+  code, not a description of it. Verified every claim empirically before
+  acting — one report's "double `\r\n`" CSV bug turned out to be false
+  (`io.StringIO` doesn't do the OS-level newline translation `open()`
+  does), and a "500 crash if a run's codebook is deleted" report was
+  correct about the crash but wrong that it's reachable: the FK
+  constraint on `runs.codebook_id` already blocks that delete, confirmed
+  by trying it and watching SQLite refuse. Fixed what was real: CSV
+  injection (CWE-1236, a `justificativa` or document text starting with
+  `=`/`+`/`-`/`@` would execute as a formula in Excel) and an XLSX export
+  crash on control characters (reproduced with a literal `\x0b`) in
+  `export.py`; an N+1 query fetching one document per result row in
+  `GET /runs/{id}/results`/export, batched into one query; WAL journal
+  mode for the SQLite engine, since multiple concurrent sessions writing
+  to one shared `codifica.sqlite` turned out to be today's actual usage
+  pattern, not a hypothetical; and three frontend races in
+  `RunsPage.tsx`/`ResultsTable.tsx`/`RunForm.tsx` — a leaked polling
+  interval and a stale-response race from switching runs quickly (fixed
+  with one selection-token mechanism), a concurrent-edit save clobbering
+  a different row's in-progress edit, and an unhandled promise rejection
+  when a post-creation refresh failed. Also hit and fixed, along the way,
+  the second occurrence of the "SQLite doesn't auto-migrate" gap
+  (`extractions` was missing the `prompt_sent`/`raw_response` columns
+  another session had added to the model, 500ing `GET /runs` on the
+  shared `codifica.sqlite`) with an additive `ALTER TABLE`, after
+  confirming with the user before writing to shared state — see TODO.md
+  for the durable note on adding real migration tooling.
+
 ## 2026-09-02 (2)
 
 - Every LLM extraction is now auditable: `ExtractionRecord` persists the
