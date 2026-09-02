@@ -50,6 +50,220 @@ def build_hypothesis_lookup(tb1_rows: list[dict]) -> dict[str, tuple[str, str]]:
     return lookup
 
 
+HYPOTHESIS_DEFINITIONS: dict[str, dict] = {
+    "H1": {
+        "primary_question": "How was access to tertiary education redistributed?",
+        "secondary_question": "What is the redistributive mechanism -- expansion or de-commodification?",
+        "a": {
+            "name": "Conditional Partisan Expansion",
+            "mechanism": (
+                "In elite-stage systems right-wing parties drive enrollment expansion because the "
+                "marginal beneficiaries are their own (relatively advantaged) constituents; "
+                "left-wing parties prefer expansion only after massification reverses the income "
+                "profile of new entrants. Expansion magnitude and timing track partisan turnover "
+                "and the elite-to-mass threshold."
+            ),
+            "premises": (
+                "Gross enrollment expansion is itself the redistributive lever, and its "
+                "timing/magnitude co-vary with the governing party's position and the elite/mass "
+                "stage; the income composition of entrants shifts as a by-product of expansion "
+                "volume."
+            ),
+        },
+        "b": {
+            "name": "De-commodification as Redistributive Mechanism",
+            "mechanism": (
+                "Gross enrollment expansion is a weak proxy for redistribution; the redistributive "
+                "cleavage runs through the de-commodification of access -- means-tested subsidies "
+                "(ProUni), affirmative action (quotas), and tuition-fee / student-finance policy. "
+                "Expansion without de-commodification does not redistribute."
+            ),
+            "premises": (
+                "The income composition of entrants shifts with the adoption of de-commodifying "
+                "instruments rather than with expansion volume; inequality reduction precedes or "
+                "exceeds what expansion alone would predict only when de-commodifying policies are "
+                "adopted."
+            ),
+        },
+    },
+    "H2": {
+        "primary_question": "How was access to tertiary education redistributed?",
+        "secondary_question": (
+            "Which actors determine the redistributive content -- governing parties alone, or "
+            "plural non-partisan actors?"
+        ),
+        "a": {
+            "name": "Strict Partisan-Primacy",
+            "mechanism": (
+                "Party preferences -> policy design -> distributive content. Governing parties are "
+                "the decisive proposers and veto-players; social movements and the educational "
+                "business sector operate only within the political space parties create, as "
+                "followers with no autonomous effect on outputs."
+            ),
+            "premises": (
+                "Governing parties are the central causal agent; non-partisan actors do not change "
+                "policy outputs against governmental preference."
+            ),
+        },
+        "b": {
+            "name": "Co-production by Plural Non-Partisan Actors",
+            "mechanism": (
+                "Grassroots movements -- particularly the Black movement and student organisations "
+                "-- and for-profit educational conglomerates affect policy with causal autonomy: "
+                "they set agendas, veto proposals, and create faits accomplis that constrain "
+                "subsequent governments. Outcomes such as the racial design of affirmative action "
+                "and the dilution of ProUni/FIES cannot be explained by partisan competition alone."
+            ),
+            "premises": (
+                "Non-partisan actors exert autonomous causal power that shapes outcomes even "
+                "against governmental preferences; under organized pressure, partisan actors "
+                "supersede their first preferences to reach agreements with non-partisan actors."
+            ),
+        },
+    },
+    "H3": {
+        "primary_question": "How was access to tertiary education redistributed?",
+        "secondary_question": (
+            "Why did private provision become dominant -- ideological preference or path-dependent "
+            "fiscal constraint?"
+        ),
+        "a": {
+            "name": "Ideological Preference for Private Provision",
+            "mechanism": (
+                "Right-wing governments (Cardoso/PSDB, Temer, Bolsonaro) are close to market actors "
+                "and promote private-sector expansion as an expression of an ideological preference "
+                "for market-based provision."
+            ),
+            "premises": (
+                "Private-sector expansion co-varies with party orientation once fiscal constraints "
+                "are held constant; right-wing governments use regulatory instruments to facilitate "
+                "private HEI entry and growth, while left-wing governments restrict it."
+            ),
+        },
+        "b": {
+            "name": "Path Dependence and Fiscal Constraint",
+            "mechanism": (
+                "Private-sector dominance reflects the institutional architecture inherited from "
+                "the 1968 reform (already private-dominant before the 1990s), the rising cost of "
+                "reversing legacy public arrangements, and binding fiscal constraints that limit "
+                "public expansion irrespective of governing party. Business power -- structural "
+                "indispensability, institutional delegation/lock-in, and instrumental lobbying -- "
+                "sustains the arrangement."
+            ),
+            "premises": (
+                "Private expansion does not co-vary with party orientation once fiscal constraints "
+                "are controlled; public expansion occurs at the margin of fiscal adjustment "
+                "regardless of which party governs."
+            ),
+        },
+    },
+}
+
+PROBABILITY_BOUNDARY_NOTES: dict[str, str] = {
+    "quase_certa": (
+        "Reserve for evidence that would be genuinely surprising or hard to explain if the rival "
+        "hypothesis were true instead -- not just evidence that fits this hypothesis's general "
+        "topic."
+    ),
+    "muito_provavel": (
+        "Use when the evidence clearly favors this hypothesis's specific mechanism over the "
+        "rival's, even if not as decisively as quase_certa."
+    ),
+    "provavel": (
+        "Use when the evidence leans toward this hypothesis but could still be loosely "
+        "accommodated by the rival hypothesis too."
+    ),
+    "cinquenta_e_cinquenta": (
+        "The correct answer whenever the evidence is topically relevant but would be roughly "
+        "equally expected under either hypothesis in this pair -- topical relevance is not the "
+        "same as discriminating power. Most evidence that only confirms the general subject area, "
+        "without speaking to which specific mechanism actually operated, belongs here."
+    ),
+    "improvavel": (
+        "Use when the evidence leans against this hypothesis, favoring the rival's mechanism "
+        "instead, though not decisively."
+    ),
+    "muito_improvavel": (
+        "Use when the evidence clearly favors the rival hypothesis's specific mechanism over this "
+        "one."
+    ),
+    "quase_impossivel": (
+        "A hoop test failure: evidence that is very hard to reconcile with this hypothesis even "
+        "generously interpreted -- e.g. evidence that directly contradicts a premise this "
+        "hypothesis states."
+    ),
+}
+
+
+def build_enriched_hypothesis_codebook_spec(pair_code: str, side_label: str) -> dict:
+    """Build a codebook spec for one side of a V7 hypothesis pair, with the
+    full theoretical definition (mechanism + premises, not just the short
+    hypothesis name) and explicit scope-check / discriminating-power /
+    consistency instructions in `description`, plus per-category
+    `boundary_notes`.
+
+    This exists because the bare-bones codebook this pilot originally used
+    (name-only description, no boundary_notes) produced exactly the
+    failure modes an under-specified codebook predicts when run for real
+    (2026-09-01, `agy`/Gemini): a hypothesis's own scope condition ignored
+    outright (H3a specifically names right-wing/market-aligned governments;
+    scored `muito_provavel` anyway for a left-wing government's policy),
+    both sides of a pair scored `muito_provavel` in over a third of cases
+    (near-zero discriminating power), and inconsistent treatment of
+    near-identical evidence. The fix is a richer prompt, not a different
+    model -- see AGENTS.md's validation rationale and this project's
+    memory note on diagnosing prompt/codebook gaps before model choice."""
+    pair = HYPOTHESIS_DEFINITIONS[pair_code]
+    other_label = "b" if side_label == "a" else "a"
+    this_side = pair[side_label]
+    other_side = pair[other_label]
+
+    description = (
+        f"Inhabit the world of the hypothesis '{this_side['name']}' and ask: if this hypothesis "
+        "were true, how expected would this evidence be? (Fairfield & Charman 2022, Bayesian "
+        "process tracing.)\n\n"
+        f"Research question: {pair['primary_question']}\n"
+        f"This pair asks: {pair['secondary_question']}\n\n"
+        f"THE HYPOTHESIS YOU ARE EVALUATING -- {this_side['name']}:\n"
+        f"Mechanism: {this_side['mechanism']}\n"
+        f"Premises: {this_side['premises']}\n\n"
+        f"THE RIVAL HYPOTHESIS in this pair -- {other_side['name']} (do not evaluate this one; "
+        "use it only as the counterfactual comparison):\n"
+        f"Mechanism: {other_side['mechanism']}\n\n"
+        "Critical instructions:\n"
+        "1. Scope check: before scoring, verify the evidence actually concerns the specific "
+        "actor/party/mechanism type this hypothesis names. Do not score high just because the "
+        "topic is generally related to the research question -- check whether the evidence's "
+        "actual actor (e.g. which party governs in the evidence) matches what this specific "
+        "hypothesis requires.\n"
+        "2. Discriminating power: your score must reflect how much MORE expected this evidence "
+        "is under THIS hypothesis than under the rival hypothesis above -- not merely whether it "
+        "is topically consistent with this hypothesis. Ask explicitly: would a reasonable "
+        "observer expect this same evidence about equally well under the rival hypothesis? If "
+        "yes, score 'cinquenta_e_cinquenta' regardless of how relevant the evidence looks.\n"
+        "3. Consistency: if evidence shows a policy being tightened, loosened, or reversed, "
+        "state which direction of change this hypothesis's own mechanism predicts before "
+        "scoring, and apply that same rule to any similarly-structured evidence -- do not flip "
+        "the interpretation between similar evidence without a reason tied to the hypothesis's "
+        "own stated mechanism."
+    )
+
+    categories = [
+        {
+            "label": label,
+            "definition": VERBAL_PROBABILITY_DEFINITIONS[label],
+            "boundary_notes": PROBABILITY_BOUNDARY_NOTES[label],
+        }
+        for label in VERBAL_PROBABILITY_LABELS
+    ]
+
+    return {
+        "concept": f"{pair_code}_{side_label}_probability",
+        "description": description,
+        "categories": categories,
+    }
+
+
 def select_gold_rows(
     tb4_rows: list[dict], hypothesis_lookup: dict[str, tuple[str, str]]
 ) -> tuple[list[dict], list[dict]]:

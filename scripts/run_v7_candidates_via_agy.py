@@ -26,7 +26,7 @@ from sqlmodel import Session, select  # noqa: E402
 from text_as_data.codebook import spec_to_yaml_string  # noqa: E402
 from text_as_data.db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord, get_engine  # noqa: E402
 from text_as_data.extraction import run_extraction  # noqa: E402
-from text_as_data.pilot_v7 import VERBAL_PROBABILITY_DEFINITIONS, VERBAL_PROBABILITY_LABELS  # noqa: E402
+from text_as_data.pilot_v7 import HYPOTHESIS_DEFINITIONS, build_enriched_hypothesis_codebook_spec  # noqa: E402
 from text_as_data.providers import CliProvider  # noqa: E402
 
 SCRATCH = Path(
@@ -34,12 +34,6 @@ SCRATCH = Path(
     "C--Users-Mancano-Documents-MancanoSync-text-as-data/"
     "64bf4a45-2f26-4117-8f92-ab0c1cf78c1f/scratchpad"
 )
-
-HYPOTHESES = {
-    "H1": ("Conditional Partisan Expansion", "De-commodification as Redistributive Mechanism"),
-    "H2": ("Strict Partisan-Primacy", "Co-production by Plural Non-Partisan Actors"),
-    "H3": ("Ideological Preference for Private Provision", "Path Dependence and Fiscal Constraint"),
-}
 
 # (fk_id_ev, hypothesis_pair)
 ASSIGNMENTS = [
@@ -62,29 +56,18 @@ ASSIGNMENTS = [
 ]
 
 
-def write_codebook_yaml(pair_code: str, side_label: str, hypothesis_name: str, other_side_name: str) -> str:
-    categories = [
-        {"label": label, "definition": VERBAL_PROBABILITY_DEFINITIONS[label]} for label in VERBAL_PROBABILITY_LABELS
-    ]
-    spec = {
-        "concept": f"{pair_code}_{side_label}_probability",
-        "description": (
-            f"Inhabit the world of the hypothesis '{hypothesis_name}' and ask: if this "
-            "hypothesis were true, how expected would this evidence be? (Fairfield & "
-            f"Charman 2022.) The competing hypothesis in this pair is '{other_side_name}' "
-            "-- do not evaluate that one here, only the probability of the evidence under "
-            f"'{hypothesis_name}'."
-        ),
-        "categories": categories,
-    }
-    return spec_to_yaml_string(spec)
+def write_codebook_yaml(pair_code: str, side_label: str) -> str:
+    """Enriched codebook (full mechanism/premises + boundary_notes), not the
+    bare-bones name-only version this pilot originally used -- see
+    pilot_v7.build_enriched_hypothesis_codebook_spec's docstring for why."""
+    return spec_to_yaml_string(build_enriched_hypothesis_codebook_spec(pair_code, side_label))
 
 
 def main() -> None:
     with open(SCRATCH / "v7_candidates_full.json", encoding="utf-8") as f:
         docs = json.load(f)
 
-    db_path = Path("data/v7_candidates.sqlite")
+    db_path = Path("data/v7_candidates_enriched.sqlite")
     if db_path.exists():
         db_path.unlink()
     engine = get_engine(f"sqlite:///{db_path}")
@@ -92,11 +75,11 @@ def main() -> None:
     provider = CliProvider(command=["agy", "-p"], prompt_mode="arg", timeout=300)
 
     run_ids_by_pair_side: dict[tuple[str, str], int] = {}
+    pair_codes = sorted({pair for _, pair in ASSIGNMENTS})
 
     with Session(engine) as session:
-        for pair_code, (name_a, name_b) in HYPOTHESES.items():
+        for pair_code in pair_codes:
             corpus_id = f"v7_candidates_{pair_code}"
-            doc_ids_for_pair = []
             for fk_id_ev, pair in ASSIGNMENTS:
                 if pair != pair_code:
                     continue
@@ -108,10 +91,9 @@ def main() -> None:
                 )
                 session.add(doc)
                 session.flush()
-                doc_ids_for_pair.append(doc.id)
 
-            for side_label, side_name, other_name in (("a", name_a, name_b), ("b", name_b, name_a)):
-                yaml_raw = write_codebook_yaml(pair_code, side_label, side_name, other_name)
+            for side_label in ("a", "b"):
+                yaml_raw = write_codebook_yaml(pair_code, side_label)
                 codebook = CodebookRecord(name=f"{pair_code}_{side_label}", yaml_raw=yaml_raw)
                 session.add(codebook)
                 session.flush()
@@ -134,9 +116,26 @@ def main() -> None:
             print(f"  run {run_id} raised: {exc}")
         print(f"  done in {time.time() - t0:.1f}s", flush=True)
 
+    # Every spreadsheet output from this pilot must carry the complete
+    # hypothesis definition and the complete evidence text sent to the LLM
+    # -- not just labels/IDs -- so a human reviewer never has to hunt down
+    # source material to check a row (author's explicit requirement,
+    # 2026-09-01, after the first draft CSV only had a short justificativa).
     with Session(engine) as session:
         rows = []
         for (pair_code, side_label), run_id in run_ids_by_pair_side.items():
+            other_label = "b" if side_label == "a" else "a"
+            pair_def = HYPOTHESIS_DEFINITIONS[pair_code]
+            this_hyp = pair_def[side_label]
+            other_hyp = pair_def[other_label]
+            hypothesis_full_definition = (
+                f"{this_hyp['name']}\n"
+                f"Mechanism: {this_hyp['mechanism']}\n"
+                f"Premises: {this_hyp['premises']}\n\n"
+                f"Rival hypothesis in this pair: {other_hyp['name']}\n"
+                f"Rival mechanism: {other_hyp['mechanism']}"
+            )
+
             extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
             for ext in extractions:
                 doc = session.get(DocumentRecord, ext.document_id)
@@ -145,23 +144,27 @@ def main() -> None:
                     {
                         "fk_id_ev": meta["fk_id_ev"],
                         "title": meta["title"],
+                        "full_evidence_text": doc.text,
                         "hypothesis_pair": pair_code,
                         "side": side_label,
+                        "hypothesis_full_definition": hypothesis_full_definition,
                         "agy_categoria": ext.categoria,
                         "agy_justificativa": ext.justificativa,
                         "agy_trecho_evidencia": ext.trecho_evidencia,
                     }
                 )
 
-    out_path = Path("data/v7_candidates_agy_results.csv")
+    out_path = Path("data/v7_candidates_agy_results_enriched.csv")
     with open(out_path, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(
             f,
             fieldnames=[
                 "fk_id_ev",
                 "title",
+                "full_evidence_text",
                 "hypothesis_pair",
                 "side",
+                "hypothesis_full_definition",
                 "agy_categoria",
                 "agy_justificativa",
                 "agy_trecho_evidencia",

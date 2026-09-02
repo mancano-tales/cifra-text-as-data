@@ -1,5 +1,7 @@
+from text_as_data.codebook import Codebook
 from text_as_data.pilot_v7 import (
     VERBAL_PROBABILITY_LABELS,
+    build_enriched_hypothesis_codebook_spec,
     build_hypothesis_lookup,
     fix_mojibake,
     select_gold_rows,
@@ -85,3 +87,54 @@ def test_verbal_probability_labels_has_seven_levels_in_scale_order():
         "muito_improvavel",
         "quase_impossivel",
     ]
+
+
+def test_enriched_codebook_spec_embeds_full_mechanism_not_just_hypothesis_name():
+    # The bare-bones codebook this pilot originally used only named the
+    # hypothesis ("Ideological Preference for Private Provision") without
+    # its actual scope condition (specifically right-wing/market-aligned
+    # governments) -- and a real run against this exact hypothesis scored
+    # a left-wing government's policy as muito_provavel anyway. The
+    # mechanism text is what states that scope condition, so it must
+    # actually be in the description the model sees, not just the name.
+    spec = build_enriched_hypothesis_codebook_spec("H3", "a")
+
+    assert "Ideological Preference for Private Provision" in spec["description"]
+    assert "Right-wing governments" in spec["description"]
+    assert "Path Dependence and Fiscal Constraint" in spec["description"]  # the rival, for contrast
+
+
+def test_enriched_codebook_spec_instructs_discriminating_power_and_scope_check():
+    spec = build_enriched_hypothesis_codebook_spec("H1", "b")
+
+    assert "Scope check" in spec["description"]
+    assert "Discriminating power" in spec["description"]
+    assert "Consistency" in spec["description"]
+
+
+def test_enriched_codebook_spec_gives_every_category_boundary_notes():
+    spec = build_enriched_hypothesis_codebook_spec("H2", "a")
+
+    for category in spec["categories"]:
+        assert category["boundary_notes"], f"category {category['label']!r} has no boundary_notes"
+
+
+def test_enriched_codebook_spec_is_a_valid_codebook():
+    # Round-trips through the real Codebook loader used by run_extraction --
+    # this is the actual contract the enriched spec must honor, not just a
+    # dict shape check.
+    spec = build_enriched_hypothesis_codebook_spec("H1", "a")
+
+    codebook = Codebook._from_spec(spec)
+
+    assert set(codebook.schema.model_fields["categoria"].annotation.__args__) == set(VERBAL_PROBABILITY_LABELS)
+    assert "Scope check" in codebook.instructions
+    assert "Boundary notes:" in codebook.instructions
+
+
+def test_enriched_codebook_spec_covers_both_sides_of_all_three_pairs():
+    for pair_code in ("H1", "H2", "H3"):
+        for side_label in ("a", "b"):
+            spec = build_enriched_hypothesis_codebook_spec(pair_code, side_label)
+            assert spec["concept"] == f"{pair_code}_{side_label}_probability"
+            assert len(spec["categories"]) == len(VERBAL_PROBABILITY_LABELS)
