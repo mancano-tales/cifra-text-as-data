@@ -1,5 +1,34 @@
 # NEWS
 
+## 2026-09-02 (2)
+
+- Every LLM extraction is now auditable: `ExtractionRecord` persists the
+  exact prompt sent and the raw (pre-parsing) response received, not just
+  the parsed categoria/justificativa/trecho_evidencia. Prompted by the
+  author asking, about a prompt shown for the V7 pilot, how to verify it
+  wasn't reconstructed after the fact and whether the pipeline is even
+  reproducible — the honest answer was that `CliProvider` built and
+  discarded the final prompt without ever persisting it. `providers.py`
+  gained `ProviderResult(parsed, prompt, raw_response)`, returned by both
+  `ApiKeyProvider` and `CliProvider` instead of a bare parsed model; both
+  new `ExtractionRecord` fields flow automatically through
+  `GET /runs/{id}/results` and every export format, since those already
+  build rows via `model_dump()`. Also ran a real reproducibility test
+  (re-running the 16 V7 candidates through the identical enriched
+  codebooks a second time): 21/32 (66%) exact match, 9 of the 11
+  differences one step apart on the 7-point scale, one real 3-step
+  reversal whose two justificativas were read side by side and found to
+  be two defensible readings of genuinely ambiguous evidence, not model
+  incoherence. Full verification methodology (a reusable 4-step procedure:
+  reconstruct from the persisted DB record, prove determinism by
+  byte-comparing against fresh source, trace prompt provenance via git
+  blame, test reproducibility empirically) and findings — including an
+  unresolved language-mixing issue introduced while enriching the
+  codebooks, and a structural note that hypothesis-pair sides are scored
+  in separate, mutually-blind LLM calls — written up in
+  `docs/research/2026-09-02_llm_pipeline_verification_methodology.md`.
+  8 new tests, 95/95 passing.
+
 ## 2026-09-02
 
 - Slice 3 shipped: a "Runs" tab joins Corpus and Codebook — create a run

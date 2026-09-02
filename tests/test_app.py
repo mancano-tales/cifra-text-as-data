@@ -3,7 +3,7 @@ from sqlmodel import Session
 
 from text_as_data.app import app, get_engine_dependency, get_provider_dependency
 from text_as_data.db import CodebookRecord, DocumentRecord, get_engine
-from text_as_data.providers import Provider
+from text_as_data.providers import Provider, ProviderResult
 
 YAML_SOURCE = """
 concept: test_concept
@@ -18,7 +18,8 @@ categories:
 
 class FakeProvider(Provider):
     def extract(self, messages, schema):
-        return schema(categoria="yes", justificativa="because", trecho_evidencia="quote")
+        parsed = schema(categoria="yes", justificativa="because", trecho_evidencia="quote")
+        return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
 
 
 def _make_test_client():

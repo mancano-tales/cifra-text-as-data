@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from text_as_data.app import app, get_engine_dependency, get_provider_dependency
 from text_as_data.db import get_engine
-from text_as_data.providers import Provider
+from text_as_data.providers import Provider, ProviderResult
 
 VALID_SPEC = {
     "concept": "protest",
@@ -18,7 +18,8 @@ VALID_SPEC = {
 
 class FakeProvider(Provider):
     def extract(self, messages, schema):
-        return schema(categoria="protest", justificativa="because", trecho_evidencia="quote")
+        parsed = schema(categoria="protest", justificativa="because", trecho_evidencia="quote")
+        return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
 
 
 def _make_test_client():

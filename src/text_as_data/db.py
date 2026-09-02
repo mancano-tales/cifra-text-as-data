@@ -47,6 +47,13 @@ class ExtractionRecord(SQLModel, table=True):
     justificativa: str
     trecho_evidencia: str
     tokens_used: int | None = None
+    # Audit trail: the exact prompt sent and the raw (pre-parsing) response
+    # received, so any result can be verified later without having to trust
+    # a reconstruction from current source -- see ProviderResult in
+    # providers.py. Empty string, not None, when a build_messages failure
+    # happened before any prompt could be built.
+    prompt_sent: str = ""
+    raw_response: str = ""
 
 
 def get_engine(db_url: str = "sqlite:///codifica.sqlite"):

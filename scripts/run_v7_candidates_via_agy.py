@@ -151,6 +151,12 @@ def main() -> None:
                         "agy_categoria": ext.categoria,
                         "agy_justificativa": ext.justificativa,
                         "agy_trecho_evidencia": ext.trecho_evidencia,
+                        # Audit trail: the exact prompt sent and the raw
+                        # (pre-parsing) CLI output received, straight from
+                        # ExtractionRecord -- so this spreadsheet is
+                        # verifiable without trusting a reconstruction.
+                        "prompt_sent": ext.prompt_sent,
+                        "raw_response": ext.raw_response,
                     }
                 )
 
@@ -168,6 +174,8 @@ def main() -> None:
                 "agy_categoria",
                 "agy_justificativa",
                 "agy_trecho_evidencia",
+                "prompt_sent",
+                "raw_response",
             ],
         )
         w.writeheader()

@@ -27,8 +27,21 @@ def test_api_key_provider_delegates_to_instructor_client():
 
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.categoria == "protest"
+    assert result.parsed.categoria == "protest"
     assert fake_client.chat.completions.calls == 1
+
+
+def test_api_key_provider_records_prompt_and_raw_response_for_audit():
+    # Without this, a run against a real API-key vendor has no way to prove
+    # after the fact what was actually sent/received -- see ProviderResult.
+    fake_client = FakeInstructorClient()
+    provider = ApiKeyProvider(client=fake_client, model="fake-model")
+    messages = [{"role": "system", "content": "instructions"}, {"role": "user", "content": "the evidence text"}]
+
+    result = provider.extract(messages=messages, schema=Label)
+
+    assert "the evidence text" in result.prompt
+    assert result.raw_response == result.parsed.model_dump_json()
 
 
 import shutil
@@ -53,7 +66,7 @@ def test_cli_provider_parses_json_from_stdout():
 
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.categoria == "protest"
+    assert result.parsed.categoria == "protest"
 
 
 def test_cli_provider_raises_on_nonzero_exit():
@@ -86,7 +99,7 @@ def test_cli_provider_skips_non_matching_json_fragment_before_the_answer():
 
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.categoria == "protest"
+    assert result.parsed.categoria == "protest"
 
 
 def test_cli_provider_handles_unmatched_brace_inside_json_string_value():
@@ -106,7 +119,7 @@ def test_cli_provider_handles_unmatched_brace_inside_json_string_value():
 
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.categoria == "protest"
+    assert result.parsed.categoria == "protest"
 
 
 def test_cli_provider_prefers_top_level_object_over_nested_sub_object():
@@ -126,7 +139,7 @@ def test_cli_provider_prefers_top_level_object_over_nested_sub_object():
 
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.categoria == "outer_match"
+    assert result.parsed.categoria == "outer_match"
 
 
 def test_cli_provider_resolves_command_via_path(monkeypatch):
@@ -193,7 +206,7 @@ def test_cli_provider_passes_prompt_as_trailing_arg_when_configured(monkeypatch)
     provider = CliProvider(command=["agy", "-p"], runner=capturing_runner, prompt_mode="arg")
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.categoria == "protest"
+    assert result.parsed.categoria == "protest"
     assert captured["command"][:2] == ["agy", "-p"]
     assert captured["command"][2].startswith("x")
     assert captured["input"] is None
@@ -202,6 +215,23 @@ def test_cli_provider_passes_prompt_as_trailing_arg_when_configured(monkeypatch)
 def test_cli_provider_rejects_unknown_prompt_mode():
     with pytest.raises(ValueError, match="prompt_mode"):
         CliProvider(command=["fake-cli"], runner=_fake_runner("{}"), prompt_mode="carrier-pigeon")
+
+
+def test_cli_provider_records_exact_prompt_and_full_raw_stdout_for_audit():
+    # The whole point of ProviderResult for CliProvider: prove later what
+    # was actually sent (not a reconstruction someone has to trust) and
+    # what the CLI actually said back, including any surrounding prose
+    # _extract_json stripped out to find the answer.
+    stdout = 'Let me think about this.\n{"categoria": "protest"}\nDone thinking.'
+    runner = _fake_runner(stdout)
+    provider = CliProvider(command=["fake-cli", "-p"], runner=runner)
+    messages = [{"role": "system", "content": "codebook instructions here"}, {"role": "user", "content": "the news article text"}]
+
+    result = provider.extract(messages=messages, schema=Label)
+
+    assert "codebook instructions here" in result.prompt
+    assert "the news article text" in result.prompt
+    assert result.raw_response == stdout  # full stdout, not just the extracted JSON candidate
 
 
 def test_cli_provider_decodes_non_ascii_output_correctly():
@@ -214,4 +244,4 @@ def test_cli_provider_decodes_non_ascii_output_correctly():
 
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.categoria == text
+    assert result.parsed.categoria == text

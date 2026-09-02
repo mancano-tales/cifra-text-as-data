@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 from text_as_data.codebook import Codebook
 from text_as_data.db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord, get_engine
 from text_as_data.extraction import ERROR_CATEGORIA, run_extraction
-from text_as_data.providers import Provider
+from text_as_data.providers import Provider, ProviderResult
 
 YAML_SOURCE = """
 concept: test_concept
@@ -24,7 +24,8 @@ class CountingFakeProvider(Provider):
 
     def extract(self, messages, schema):
         self.calls += 1
-        return schema(categoria="yes", justificativa="because", trecho_evidencia="quote")
+        parsed = schema(categoria="yes", justificativa="because", trecho_evidencia="quote")
+        return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
 
 
 class AlwaysFailingProvider(Provider):
@@ -162,6 +163,75 @@ def test_run_extraction_records_build_messages_failure_as_error_row_without_cras
     # build_messages fails before provider.extract is ever reached, and a
     # build_messages failure must not be pointlessly retried.
     assert provider.calls == 0
+
+
+def test_run_extraction_persists_prompt_and_raw_response_on_success():
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=1)
+
+    run_extraction(engine, run_id, CountingFakeProvider())
+
+    with Session(engine) as session:
+        extraction = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).one()
+        assert extraction.prompt_sent == "fake prompt"
+        assert extraction.raw_response == "fake raw response"
+
+
+def test_run_extraction_persists_best_effort_prompt_on_provider_failure():
+    # No ProviderResult exists when the provider itself raises -- but the
+    # messages that were *going* to be sent are still known (build_messages
+    # already succeeded), so that much is worth recording rather than
+    # leaving the audit trail empty.
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=1)
+
+    run_extraction(engine, run_id, AlwaysFailingProvider())
+
+    with Session(engine) as session:
+        extraction = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).one()
+        assert extraction.categoria == ERROR_CATEGORIA
+        assert extraction.prompt_sent != ""
+        assert "document 0" in extraction.prompt_sent
+
+
+def test_run_extraction_leaves_prompt_empty_when_build_messages_fails(monkeypatch):
+    def _raise(self, text):
+        raise ValueError("mojibake broke build_messages")
+
+    monkeypatch.setattr(Codebook, "build_messages", _raise)
+
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=1)
+
+    run_extraction(engine, run_id, CountingFakeProvider())
+
+    with Session(engine) as session:
+        extraction = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).one()
+        assert extraction.prompt_sent == ""
+
+
+def test_run_extraction_copies_prompt_and_raw_response_from_cached_extraction():
+    engine = get_engine("sqlite://")
+    run_id, corpus_id = _seed(engine, n_documents=1)
+    run_extraction(engine, run_id, CountingFakeProvider())
+
+    with Session(engine) as session:
+        codebook_id = session.exec(select(RunRecord).where(RunRecord.id == run_id)).one().codebook_id
+        second_run = RunRecord(codebook_id=codebook_id, corpus_id=corpus_id, model="fake-model")
+        session.add(second_run)
+        session.commit()
+        session.refresh(second_run)
+        second_run_id = second_run.id
+
+    # A different fake, never called (cache hit) -- if the cached
+    # prompt_sent/raw_response weren't copied over, this run's row would
+    # end up with empty audit fields despite reusing a real extraction.
+    run_extraction(engine, second_run_id, CountingFakeProvider())
+
+    with Session(engine) as session:
+        extraction = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == second_run_id)).one()
+        assert extraction.prompt_sent == "fake prompt"
+        assert extraction.raw_response == "fake raw response"
 
 
 def test_run_extraction_raises_clear_error_for_unknown_run_id():

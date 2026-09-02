@@ -32,6 +32,7 @@ def extract(
     return pd.DataFrame(rows)
 
 
+import json
 import logging
 
 from sqlmodel import Session, select
@@ -95,15 +96,23 @@ def run_extraction(engine, run_id: int, provider: Provider) -> None:
                         cached.justificativa,
                         cached.trecho_evidencia,
                     )
+                    prompt_sent, raw_response = cached.prompt_sent, cached.raw_response
                 else:
+                    # Best-effort fallback if build_messages succeeds but the
+                    # provider call itself fails: still record what was
+                    # *going* to be sent, even without the provider's own
+                    # (more precise, e.g. CLI-schema-suffixed) prompt string.
+                    prompt_sent, raw_response = "", ""
                     try:
                         messages = codebook.build_messages(document.text)
+                        prompt_sent = json.dumps(messages, ensure_ascii=False)
                         result = _extract_with_retry(provider, messages, codebook.schema)
                         categoria, justificativa, trecho = (
-                            result.categoria,
-                            result.justificativa,
-                            result.trecho_evidencia,
+                            result.parsed.categoria,
+                            result.parsed.justificativa,
+                            result.parsed.trecho_evidencia,
                         )
+                        prompt_sent, raw_response = result.prompt, result.raw_response
                     except Exception as exc:  # noqa: BLE001 -- one bad document must not kill the run
                         categoria, justificativa, trecho = ERROR_CATEGORIA, str(exc), ""
 
@@ -114,6 +123,8 @@ def run_extraction(engine, run_id: int, provider: Provider) -> None:
                         categoria=categoria,
                         justificativa=justificativa,
                         trecho_evidencia=trecho,
+                        prompt_sent=prompt_sent,
+                        raw_response=raw_response,
                     )
                 )
                 session.commit()

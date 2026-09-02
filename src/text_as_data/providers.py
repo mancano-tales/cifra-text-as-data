@@ -4,16 +4,37 @@ import json
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
 
+@dataclass
+class ProviderResult:
+    """A provider's answer plus the audit trail of what actually produced
+    it: the exact prompt sent and the raw (pre-parsing) response received.
+
+    Without this, `run_extraction` could only persist the *parsed*
+    categoria/justificativa/trecho_evidencia -- there was no way to prove,
+    after the fact, what an LLM was actually asked or actually said before
+    `CliProvider._extract_json` stripped any surrounding prose. For a tool
+    whose whole premise is that LLM coding must be auditable and
+    reproducible (see AGENTS.md's validation rationale), silently
+    discarding that is a real gap, not a cosmetic one."""
+
+    parsed: BaseModel
+    prompt: str
+    raw_response: str
+
+
 class Provider(ABC):
-    """Something that can turn (messages, schema) into a validated schema instance."""
+    """Something that can turn (messages, schema) into a validated schema
+    instance, plus the prompt/raw-response audit trail (see
+    `ProviderResult`)."""
 
     @abstractmethod
-    def extract(self, messages: list[dict], schema: type[BaseModel]) -> BaseModel:
+    def extract(self, messages: list[dict], schema: type[BaseModel]) -> ProviderResult:
         ...
 
 
@@ -25,12 +46,21 @@ class ApiKeyProvider(Provider):
         self._client = client
         self._model = model
 
-    def extract(self, messages: list[dict], schema: type[BaseModel]) -> BaseModel:
-        return self._client.chat.completions.create(
+    def extract(self, messages: list[dict], schema: type[BaseModel]) -> ProviderResult:
+        result = self._client.chat.completions.create(
             model=self._model,
             response_model=schema,
             messages=messages,
             max_retries=3,
+        )
+        # instructor enforces the schema via function-calling, so there is
+        # no separate "raw text" distinct from the parsed result the way
+        # CliProvider has raw CLI stdout -- the parsed JSON itself is the
+        # most honest thing to record as what was actually received.
+        return ProviderResult(
+            parsed=result,
+            prompt=json.dumps(messages, ensure_ascii=False),
+            raw_response=result.model_dump_json(),
         )
 
 
@@ -74,7 +104,7 @@ class CliProvider(Provider):
             raise ValueError(f"prompt_mode must be 'stdin' or 'arg', got {prompt_mode!r}")
         self._prompt_mode = prompt_mode
 
-    def extract(self, messages: list[dict], schema: type[BaseModel]) -> BaseModel:
+    def extract(self, messages: list[dict], schema: type[BaseModel]) -> ProviderResult:
         prompt = self._build_prompt(messages, schema)
         if self._prompt_mode == "arg":
             # Some CLIs (e.g. Google Antigravity's `agy -p "<prompt>"`) take
@@ -99,7 +129,12 @@ class CliProvider(Provider):
         if result.returncode != 0:
             raise RuntimeError(f"CLI command failed (exit {result.returncode}): {result.stderr}")
         json_str = self._extract_json(result.stdout, schema)
-        return schema.model_validate_json(json_str)
+        parsed = schema.model_validate_json(json_str)
+        # raw_response is the CLI's full stdout, not just the extracted
+        # JSON candidate -- e.g. any surrounding prose _extract_json
+        # stripped out is exactly the kind of thing worth being able to
+        # inspect later when a result looks off.
+        return ProviderResult(parsed=parsed, prompt=prompt, raw_response=result.stdout)
 
     @staticmethod
     def _build_prompt(messages: list[dict], schema: type[BaseModel]) -> str:
