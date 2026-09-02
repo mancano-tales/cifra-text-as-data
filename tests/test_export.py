@@ -15,7 +15,7 @@ SAMPLE_ROWS = [
 def test_results_to_csv_bytes_round_trips():
     content = results_to_csv_bytes(SAMPLE_ROWS)
 
-    reader = csv.DictReader(io.StringIO(content.decode("utf-8")))
+    reader = csv.DictReader(io.StringIO(content.decode("utf-8-sig")))
     rows = list(reader)
 
     assert rows == SAMPLE_ROWS
@@ -23,6 +23,22 @@ def test_results_to_csv_bytes_round_trips():
 
 def test_results_to_csv_bytes_handles_empty_list():
     assert results_to_csv_bytes([]) == b""
+
+
+def test_results_to_csv_bytes_has_utf8_bom_for_excel():
+    content = results_to_csv_bytes(SAMPLE_ROWS)
+
+    assert content.startswith(b"\xef\xbb\xbf")
+
+
+def test_results_to_csv_bytes_defuses_leading_formula_characters():
+    rows = [{"justificativa": "=CMD|' /C calc.exe'!A0", "categoria": "x"}]
+
+    content = results_to_csv_bytes(rows)
+
+    reader = csv.DictReader(io.StringIO(content.decode("utf-8-sig")))
+    row = next(reader)
+    assert row["justificativa"] == "'=CMD|' /C calc.exe'!A0"
 
 
 def test_results_to_xlsx_bytes_round_trips():
@@ -35,6 +51,32 @@ def test_results_to_xlsx_bytes_round_trips():
     rows = [dict(zip(header, values)) for values in rows_iter]
 
     assert rows == SAMPLE_ROWS
+
+
+def test_results_to_xlsx_bytes_strips_illegal_control_characters():
+    rows = [{"justificativa": "hello\x0bworld", "categoria": "x"}]
+
+    content = results_to_xlsx_bytes(rows)  # must not raise IllegalCharacterError
+
+    workbook = openpyxl.load_workbook(io.BytesIO(content))
+    sheet = workbook.active
+    rows_iter = sheet.iter_rows(values_only=True)
+    next(rows_iter)  # header
+    data_row = next(rows_iter)
+    assert data_row[0] == "helloworld"
+
+
+def test_results_to_xlsx_bytes_defuses_leading_formula_characters():
+    rows = [{"justificativa": "=SUM(A1:A10)", "categoria": "x"}]
+
+    content = results_to_xlsx_bytes(rows)
+
+    workbook = openpyxl.load_workbook(io.BytesIO(content))
+    sheet = workbook.active
+    rows_iter = sheet.iter_rows(values_only=True)
+    next(rows_iter)  # header
+    data_row = next(rows_iter)
+    assert data_row[0] == "'=SUM(A1:A10)"
 
 
 def test_results_to_json_bytes_round_trips():
