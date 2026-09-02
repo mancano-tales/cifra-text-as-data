@@ -31,6 +31,13 @@ def validate_spec(spec: dict) -> None:
     Both `Codebook.from_yaml_string` and `spec_to_yaml_string` call this,
     so the YAML format and the editor's JSON body can never validate
     differently."""
+    if not isinstance(spec, dict):
+        # A comments-only or blank YAML document parses to None (and a
+        # bare YAML scalar/list parses to something that isn't a mapping
+        # either) -- without this check, spec.get(...) below raises a raw
+        # AttributeError instead of the ValueError every other invalid
+        # input in this function produces.
+        raise ValueError(f"codebook spec must be a YAML mapping (object), got {spec!r}")
     if not spec.get("concept"):
         raise ValueError("codebook spec missing required field: 'concept'")
     if not spec.get("description"):
@@ -40,8 +47,16 @@ def validate_spec(spec: dict) -> None:
 
     labels = []
     for category in spec["categories"]:
-        if not category.get("label"):
-            raise ValueError("codebook category missing required field: 'label'")
+        label = category.get("label")
+        # Deliberately isinstance(str), not just `not label` -- an unquoted
+        # YAML integer label (e.g. `label: 0`) is falsy-adjacent under a
+        # bare truthiness check (`not 0` is True) and would be rejected
+        # with the same message as a genuinely missing label, instead of
+        # this project's actual requirement: a non-empty string, since
+        # `categoria` is a string everywhere downstream (ExtractionRecord,
+        # the frontend, every codebook example in AGENTS.md).
+        if not isinstance(label, str) or not label:
+            raise ValueError(f"codebook category label must be a non-empty string, got {label!r}")
         if not category.get("definition"):
             raise ValueError(f"category {category.get('label')!r} missing required field: 'definition'")
         labels.append(category["label"])

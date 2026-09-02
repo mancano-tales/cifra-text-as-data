@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pandas as pd
 from sklearn.metrics import accuracy_score, cohen_kappa_score, precision_recall_fscore_support
 
@@ -31,9 +33,18 @@ def agreement_report(
         precision, recall, f1, _ = precision_recall_fscore_support(
             merged[gold_col], merged[pred_col], labels=labels, average=None, zero_division=0
         )
+        kappa = cohen_kappa_score(merged[gold_col], merged[pred_col])
+        if isinstance(kappa, float) and math.isnan(kappa):
+            # sklearn returns nan (not an error) when there's only one label
+            # in common between predicted and gold -- the exact "LLM always
+            # predicts the majority class" case kappa exists to catch, so
+            # this is an expected input, not a bug to raise on. `nan` isn't
+            # valid JSON (json.dumps emits a bare `NaN` token that
+            # JSON.parse() rejects), so it's reported as `None` instead.
+            kappa = None
         per_column[col] = {
             "accuracy": accuracy_score(merged[gold_col], merged[pred_col]),
-            "kappa": cohen_kappa_score(merged[gold_col], merged[pred_col]),
+            "kappa": kappa,
             "precision": dict(zip(labels, precision)),
             "recall": dict(zip(labels, recall)),
             "f1": dict(zip(labels, f1)),

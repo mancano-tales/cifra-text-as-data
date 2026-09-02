@@ -113,6 +113,25 @@ def test_run_extraction_records_real_error_message_and_still_marks_run_done():
     assert provider.calls == 3  # retried up to the stop_after_attempt(3) limit
 
 
+def test_run_extraction_truncates_a_huge_error_message():
+    # A subprocess.TimeoutExpired's str() includes whatever partial
+    # stdout/stderr was captured before the kill -- for a CLI provider that
+    # can be large. Nothing should land verbatim in the justificativa
+    # column at unbounded length, regardless of exception type.
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=1)
+    huge_message = "x" * 5000
+    provider = AlwaysFailingProvider(message=huge_message)
+
+    run_extraction(engine, run_id, provider)
+
+    with Session(engine) as session:
+        extraction = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).first()
+        assert extraction.categoria == ERROR_CATEGORIA
+        assert len(extraction.justificativa) < len(huge_message)
+        assert extraction.justificativa.endswith("[truncated]")
+
+
 def test_run_extraction_does_not_treat_error_row_as_cached():
     engine = get_engine("sqlite://")
     run_id, corpus_id = _seed(engine, n_documents=1)

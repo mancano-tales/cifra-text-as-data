@@ -84,6 +84,34 @@ categories:
         Codebook.from_yaml_string(missing_concept_yaml)
 
 
+def test_from_yaml_string_rejects_a_comments_only_document_as_value_error():
+    # yaml.load('# just a comment') parses to None, not a dict -- without
+    # a type check, validate_spec(None) raises a raw AttributeError instead
+    # of the ValueError every other invalid input in this module produces.
+    comments_only_yaml = "# just a comment, no actual codebook content\n"
+
+    with pytest.raises(ValueError, match="must be a YAML mapping"):
+        Codebook.from_yaml_string(comments_only_yaml)
+
+
+def test_from_yaml_string_rejects_a_non_string_label():
+    # An unquoted YAML integer label (e.g. `label: 0`) is falsy under a
+    # bare truthiness check (`not 0` is True) and would otherwise be
+    # rejected with the same message as a genuinely missing label.
+    integer_label_yaml = """
+concept: protest
+description: A collective, public event.
+categories:
+  - label: 0
+    definition: An occupation, march, or strike.
+  - label: not_protest
+    definition: Any event that does not meet the criteria above.
+"""
+
+    with pytest.raises(ValueError, match="non-empty string"):
+        Codebook.from_yaml_string(integer_label_yaml)
+
+
 VALID_SPEC = {
     "concept": "protest",
     "description": "A collective, public event.",

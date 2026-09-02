@@ -77,6 +77,25 @@ def test_agreement_report_includes_precision_recall_f1_per_category():
     assert metrics["f1"]["protest"] == pytest.approx(0.8)  # 2*P*R/(P+R) = 2*(2/3)*1/(2/3+1)
 
 
+def test_agreement_report_kappa_is_json_serializable_none_not_nan_for_single_label_data():
+    # Every row is the same category on both sides -- the exact "LLM always
+    # predicts the majority class" case kappa exists to catch. sklearn
+    # returns nan (not an error) here, and nan isn't valid JSON.
+    predicted = pd.DataFrame({"id": [1, 2, 3], "categoria": ["protest", "protest", "protest"]})
+    gold = pd.DataFrame({"id": [1, 2, 3], "categoria": ["protest", "protest", "protest"]})
+
+    report = agreement_report(predicted, gold)
+
+    kappa = report["per_column"]["categoria"]["kappa"]
+    assert kappa is None
+    import json
+
+    # json.dumps() alone won't catch this -- Python's json module allows a
+    # bare NaN token by default. Assert the serialized text is actually
+    # free of it (browsers' JSON.parse() rejects a literal NaN token).
+    assert "NaN" not in json.dumps(report)
+
+
 def test_toy_example_codebook_builds_messages(toy_codebook_module):
     codebook = toy_codebook_module.toy_codebook
 

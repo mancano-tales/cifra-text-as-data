@@ -114,7 +114,16 @@ def run_extraction(engine, run_id: int, provider: Provider) -> None:
                         )
                         prompt_sent, raw_response = result.prompt, result.raw_response
                     except Exception as exc:  # noqa: BLE001 -- one bad document must not kill the run
-                        categoria, justificativa, trecho = ERROR_CATEGORIA, str(exc), ""
+                        # A subprocess.TimeoutExpired's str() includes
+                        # whatever partial stdout/stderr was captured before
+                        # the kill -- for a CLI provider that can be large,
+                        # and it would otherwise land verbatim in this TEXT
+                        # column. Truncated defensively for any exception
+                        # type, not just that one.
+                        error_message = str(exc)
+                        if len(error_message) > 2000:
+                            error_message = error_message[:2000] + "... [truncated]"
+                        categoria, justificativa, trecho = ERROR_CATEGORIA, error_message, ""
 
                 session.add(
                     ExtractionRecord(
