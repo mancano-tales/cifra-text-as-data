@@ -52,7 +52,7 @@ def _extract_with_retry(provider: Provider, messages: list[dict], schema):
     return provider.extract(messages, schema)
 
 
-def run_extraction(engine, run_id: int, provider: Provider) -> None:
+def run_extraction(engine, run_id: int, provider: Provider, include_persona: bool = True) -> None:
     """Execute a run: for every document in the run's corpus, reuse a cached
     extraction if one exists for the same (document, codebook, model), else
     call the provider (with retry) and persist the result. A single
@@ -62,7 +62,14 @@ def run_extraction(engine, run_id: int, provider: Provider) -> None:
     of leaving it stuck at "running" forever — this is the caller's
     (`app.py`'s `BackgroundTasks`) only signal that something went wrong,
     since a background task's exception is otherwise just logged and
-    dropped by the ASGI server."""
+    dropped by the ASGI server.
+
+    `include_persona` (default True, matching prior behavior) is passed
+    straight through to `Codebook.build_messages` -- exists for prompt-
+    design experiments (e.g. ablating the fixed persona line) that want
+    run_extraction's caching/retry/persistence machinery without also
+    wanting the persona text. Not exposed via `app.py`/`CreateRunRequest`;
+    a real research run always wants it on."""
     with Session(engine) as session:
         run = session.get(RunRecord, run_id)
         if run is None:
@@ -129,7 +136,7 @@ def run_extraction(engine, run_id: int, provider: Provider) -> None:
                     # (more precise, e.g. CLI-schema-suffixed) prompt string.
                     prompt_sent, raw_response = "", ""
                     try:
-                        messages = codebook.build_messages(document.text)
+                        messages = codebook.build_messages(document.text, include_persona=include_persona)
                         prompt_sent = json.dumps(messages, ensure_ascii=False)
                         result = _extract_with_retry(provider, messages, codebook.schema)
                         categoria, justificativa, trecho = (
