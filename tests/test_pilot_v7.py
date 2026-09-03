@@ -3,6 +3,7 @@ from text_as_data.pilot_v7 import (
     VERBAL_PROBABILITY_LABELS,
     build_enriched_hypothesis_codebook_spec,
     build_hypothesis_lookup,
+    build_joint_hypothesis_messages_and_schema,
     fix_mojibake,
     select_gold_rows,
 )
@@ -138,3 +139,32 @@ def test_enriched_codebook_spec_covers_both_sides_of_all_three_pairs():
             spec = build_enriched_hypothesis_codebook_spec(pair_code, side_label)
             assert spec["concept"] == f"{pair_code}_{side_label}_probability"
             assert len(spec["categories"]) == len(VERBAL_PROBABILITY_LABELS)
+
+
+def test_joint_hypothesis_messages_include_both_sides_and_the_evidence():
+    messages, schema = build_joint_hypothesis_messages_and_schema("H1", "some evidence text")
+
+    assert messages[0]["role"] == "system"
+    assert "Conditional Partisan Expansion" in messages[0]["content"]
+    assert "De-commodification as Redistributive Mechanism" in messages[0]["content"]
+    assert messages[-1] == {"role": "user", "content": "some evidence text"}
+
+
+def test_joint_hypothesis_schema_has_independent_fields_for_both_sides():
+    _, schema = build_joint_hypothesis_messages_and_schema("H2", "x")
+
+    fields = schema.model_fields
+    assert set(fields) == {
+        "categoria_a", "justificativa_a", "trecho_evidencia_a",
+        "categoria_b", "justificativa_b", "trecho_evidencia_b",
+    }
+    assert set(fields["categoria_a"].annotation.__args__) == set(VERBAL_PROBABILITY_LABELS)
+    assert set(fields["categoria_b"].annotation.__args__) == set(VERBAL_PROBABILITY_LABELS)
+
+
+def test_joint_hypothesis_messages_differ_by_pair_code():
+    messages_h1, _ = build_joint_hypothesis_messages_and_schema("H1", "x")
+    messages_h3, _ = build_joint_hypothesis_messages_and_schema("H3", "x")
+
+    assert messages_h1[0]["content"] != messages_h3[0]["content"]
+    assert "Ideological Preference for Private Provision" in messages_h3[0]["content"]
