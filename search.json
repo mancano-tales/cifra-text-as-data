@@ -4,7 +4,7 @@
     "href": "validation.html",
     "title": "Why Validation Matters",
     "section": "",
-    "text": "Halterman & Keith (2025) and the same group’s 2026 follow-up argue that off-the-shelf LLMs frequently substitute their own generic notion of a concept for a codebook’s specific operationalization. Cifra’s design takes that seriously enough to build a whole screen around catching it — but a citation isn’t proof it applies to this pipeline. So it was tested for real, against real data, with the result kept regardless of which way it came out.",
+    "text": "Halterman & Keith (2025) and the same group’s 2026 follow-up argue that off-the-shelf LLMs frequently substitute their own generic notion of a concept for a codebook’s specific operationalization. Decifra’s design takes that seriously enough to build a whole screen around catching it — but a citation isn’t proof it applies to this pipeline. So it was tested for real, against real data, with the result kept regardless of which way it came out.",
     "crumbs": [
       "Overview",
       "Why Validation Matters"
@@ -15,7 +15,7 @@
     "href": "validation.html#the-claim-and-why-it-needs-more-than-a-citation",
     "title": "Why Validation Matters",
     "section": "",
-    "text": "Halterman & Keith (2025) and the same group’s 2026 follow-up argue that off-the-shelf LLMs frequently substitute their own generic notion of a concept for a codebook’s specific operationalization. Cifra’s design takes that seriously enough to build a whole screen around catching it — but a citation isn’t proof it applies to this pipeline. So it was tested for real, against real data, with the result kept regardless of which way it came out.",
+    "text": "Halterman & Keith (2025) and the same group’s 2026 follow-up argue that off-the-shelf LLMs frequently substitute their own generic notion of a concept for a codebook’s specific operationalization. Decifra’s design takes that seriously enough to build a whole screen around catching it — but a citation isn’t proof it applies to this pipeline. So it was tested for real, against real data, with the result kept regardless of which way it came out.",
     "crumbs": [
       "Overview",
       "Why Validation Matters"
@@ -26,7 +26,7 @@
     "href": "validation.html#the-test-a-real-bayesian-process-tracing-pilot",
     "title": "Why Validation Matters",
     "section": "The test: a real Bayesian process-tracing pilot",
-    "text": "The test: a real Bayesian process-tracing pilot\nThe pilot corpus is a Bayesian abductive process-tracing evidence database (Fairfield & Charman 2022) built for a separate MA thesis on Brazilian tertiary-education politics: pairs of rival hypotheses (e.g. “expansion tracks partisan turnover” vs. “de-commodification is the real redistributive mechanism”), each evaluated against real news evidence on a seven-level verbal probability scale.\nSixteen real evidence/hypothesis-pair evaluations were run through Cifra’s actual extraction engine — not a mocked call, not a description of what the model would probably say — using a codebook that named each hypothesis and its scale, but nothing more:\ndescription: &gt;\n  Inhabit the world of the hypothesis 'Ideological Preference for Private\n  Provision'... The competing hypothesis in this pair is 'Path Dependence\n  and Fiscal Constraint' -- do not evaluate that one here.\ncategories:\n  - label: quase_certa\n    definition: \"Quase certamente observaríamos esta evidência... (~0.95).\"\n  # ... six more labels, no further guidance",
+    "text": "The test: a real Bayesian process-tracing pilot\nThe pilot corpus is a Bayesian abductive process-tracing evidence database (Fairfield & Charman 2022) built for a separate MA thesis on Brazilian tertiary-education politics: pairs of rival hypotheses (e.g. “expansion tracks partisan turnover” vs. “de-commodification is the real redistributive mechanism”), each evaluated against real news evidence on a seven-level verbal probability scale.\nSixteen real evidence/hypothesis-pair evaluations were run through Decifra’s actual extraction engine — not a mocked call, not a description of what the model would probably say — using a codebook that named each hypothesis and its scale, but nothing more:\ndescription: &gt;\n  Inhabit the world of the hypothesis 'Ideological Preference for Private\n  Provision'... The competing hypothesis in this pair is 'Path Dependence\n  and Fiscal Constraint' -- do not evaluate that one here.\ncategories:\n  - label: quase_certa\n    definition: \"Quase certamente observaríamos esta evidência... (~0.95).\"\n  # ... six more labels, no further guidance",
     "crumbs": [
       "Overview",
       "Why Validation Matters"
@@ -48,7 +48,7 @@
     "href": "validation.html#the-fix-and-the-proof-it-worked",
     "title": "Why Validation Matters",
     "section": "The fix, and the proof it worked",
-    "text": "The fix, and the proof it worked\nThe codebook — not the model — changed: the full mechanism and premises for each hypothesis (not just its name), the rival hypothesis stated explicitly as the counterfactual, and three added instructions — a scope check, an explicit discriminating-power question (“would a reasonable observer expect this same evidence equally well under the rival hypothesis?”), and a consistency rule for evidence showing policy change.\nThe identical 16 evaluations were re-run through the identical model and provider, nothing else changed:\n\n\n\n\n\n\n\n\n\nBefore\nAfter\n\n\n\n\nNon-discriminating evaluations (both sides scored high)\n6 / 16\n0 / 16\n\n\nShare of outputs scoring muito_provavel\n66%\n28%\n\n\nThe scope-condition case (left-wing government vs. a right-wing-specific hypothesis)\nmuito_provavel (wrong)\nquase_impossivel, with the model’s own justification naming the governing party and calling it a “hoop test failure”\n\n\n\nSame model. Same provider. Only the prompt changed. This is the concrete, falsifiable version of Cifra’s own thesis: an LLM coding failure is, first and most often, a codebook-specification problem — not a reason to swap models.",
+    "text": "The fix, and the proof it worked\nThe codebook — not the model — changed: the full mechanism and premises for each hypothesis (not just its name), the rival hypothesis stated explicitly as the counterfactual, and three added instructions — a scope check, an explicit discriminating-power question (“would a reasonable observer expect this same evidence equally well under the rival hypothesis?”), and a consistency rule for evidence showing policy change.\nThe identical 16 evaluations were re-run through the identical model and provider, nothing else changed:\n\n\n\n\n\n\n\n\n\nBefore\nAfter\n\n\n\n\nNon-discriminating evaluations (both sides scored high)\n6 / 16\n0 / 16\n\n\nShare of outputs scoring muito_provavel\n66%\n28%\n\n\nThe scope-condition case (left-wing government vs. a right-wing-specific hypothesis)\nmuito_provavel (wrong)\nquase_impossivel, with the model’s own justification naming the governing party and calling it a “hoop test failure”\n\n\n\nSame model. Same provider. Only the prompt changed. This is the concrete, falsifiable version of Decifra’s own thesis: an LLM coding failure is, first and most often, a codebook-specification problem — not a reason to swap models.",
     "crumbs": [
       "Overview",
       "Why Validation Matters"
@@ -59,18 +59,18 @@
     "href": "validation.html#a-second-uncomfortable-finding-single-run-variance",
     "title": "Why Validation Matters",
     "section": "A second, uncomfortable finding: single-run variance",
-    "text": "A second, uncomfortable finding: single-run variance\nThe same 16 evaluations, run twice through the same, already-enriched codebook with nothing changed between runs, agreed exactly on only 21 of 32 (66%) decisions. Nine of the eleven disagreements were one step apart on the seven-point scale; one was a real reversal. Reading both justifications for that reversal side by side showed two independently well-reasoned readings of genuinely ambiguous evidence — not the model being incoherent.\nThe practical conclusion: even a well-specified codebook does not make a single LLM run definitive. Cifra’s validation screen exists to compare output against human gold labels — this finding is why running a category more than once, or otherwise surfacing sampling variance, matters too, not just codebook quality.",
+    "text": "A second, uncomfortable finding: single-run variance\nThe same 16 evaluations, run twice through the same, already-enriched codebook with nothing changed between runs, agreed exactly on only 21 of 32 (66%) decisions. Nine of the eleven disagreements were one step apart on the seven-point scale; one was a real reversal. Reading both justifications for that reversal side by side showed two independently well-reasoned readings of genuinely ambiguous evidence — not the model being incoherent.\nThe practical conclusion: even a well-specified codebook does not make a single LLM run definitive. Decifra’s validation screen exists to compare output against human gold labels — this finding is why running a category more than once, or otherwise surfacing sampling variance, matters too, not just codebook quality.",
     "crumbs": [
       "Overview",
       "Why Validation Matters"
     ]
   },
   {
-    "objectID": "validation.html#what-this-means-for-using-cifra",
-    "href": "validation.html#what-this-means-for-using-cifra",
+    "objectID": "validation.html#what-this-means-for-using-decifra",
+    "href": "validation.html#what-this-means-for-using-decifra",
     "title": "Why Validation Matters",
-    "section": "What this means for using Cifra",
-    "text": "What this means for using Cifra\nTreat every automated result as provisional until it has been checked against a human-coded sample for that specific codebook. A tight, richly specified codebook is the single highest-leverage thing a researcher controls before that check — worth the time it takes to write boundary notes and examples, not a formality to skip past. The Validation screen (Cohen’s kappa, per-category precision/recall/F1, and a disagreement list for manual reading) is what turns that check into a number, not a feeling.\nFull methodology, including the verification procedure used to prove none of the numbers above were reconstructed after the fact, is in the repository’s research notes.",
+    "section": "What this means for using Decifra",
+    "text": "What this means for using Decifra\nTreat every automated result as provisional until it has been checked against a human-coded sample for that specific codebook. A tight, richly specified codebook is the single highest-leverage thing a researcher controls before that check — worth the time it takes to write boundary notes and examples, not a formality to skip past. The Validation screen (Cohen’s kappa, per-category precision/recall/F1, and a disagreement list for manual reading) is what turns that check into a number, not a feeling.\nFull methodology, including the verification procedure used to prove none of the numbers above were reconstructed after the fact, is in the repository’s research notes.",
     "crumbs": [
       "Overview",
       "Why Validation Matters"
@@ -125,7 +125,7 @@
     "href": "how-it-works.html#calling-the-model-two-provider-modes-one-interface",
     "title": "How It Works",
     "section": "4. Calling the model — two provider modes, one interface",
-    "text": "4. Calling the model — two provider modes, one interface\nCifra’s provider layer is deliberately agent-agnostic. Both modes implement the same Provider.extract(messages, schema) interface, so the extraction engine never has to know which one is active:\nAPI-key mode — a direct key (Anthropic or OpenAI) via instructor. Schema is enforced at the API level through function/tool calling: the provider cannot return a response that fails to validate. This is the reliable path for a real coding run.\nCLI mode — shells out to an already-installed CLI the researcher has a subscription for (Claude Code, a Codex-style CLI, or any command that takes a prompt and returns text). No API-level schema enforcement exists here — the schema is requested in the prompt text, and the response is scanned for the first JSON object that actually validates against it, with up to three retries on malformed output. This is explicitly best-effort: the trade-off for not needing a separately billed API key.",
+    "text": "4. Calling the model — two provider modes, one interface\nDecifra’s provider layer is deliberately agent-agnostic. Both modes implement the same Provider.extract(messages, schema) interface, so the extraction engine never has to know which one is active:\nAPI-key mode — a direct key (Anthropic or OpenAI) via instructor. Schema is enforced at the API level through function/tool calling: the provider cannot return a response that fails to validate. This is the reliable path for a real coding run.\nCLI mode — shells out to an already-installed CLI the researcher has a subscription for (Claude Code, a Codex-style CLI, or any command that takes a prompt and returns text). No API-level schema enforcement exists here — the schema is requested in the prompt text, and the response is scanned for the first JSON object that actually validates against it, with up to three retries on malformed output. This is explicitly best-effort: the trade-off for not needing a separately billed API key.",
     "crumbs": [
       "Overview",
       "How It Works"
@@ -158,7 +158,7 @@
     "href": "how-it-works.html#validation",
     "title": "How It Works",
     "section": "7. Validation",
-    "text": "7. Validation\nOnce a subset of documents has human-coded gold labels — either imported directly as a plain CSV, or round-tripped from a QualiLab manual-coding project — Cifra computes accuracy, Cohen’s kappa, and per-category precision/recall/F1 against a run’s output, and surfaces the disagreements for manual reading. See Why Validation Matters for why this step exists at all and what it caught in practice.",
+    "text": "7. Validation\nOnce a subset of documents has human-coded gold labels — either imported directly as a plain CSV, or round-tripped from a QualiLab manual-coding project — Decifra computes accuracy, Cohen’s kappa, and per-category precision/recall/F1 against a run’s output, and surfaces the disagreements for manual reading. See Why Validation Matters for why this step exists at all and what it caught in practice.",
     "crumbs": [
       "Overview",
       "How It Works"
@@ -167,9 +167,9 @@
   {
     "objectID": "index.html",
     "href": "index.html",
-    "title": "Cifra",
+    "title": "Decifra",
     "section": "",
-    "text": "Social scientists — political science, sociology, geography — routinely turn unstructured text into categorical data: is this news article describing a protest? does this public statement support or oppose a policy? Historically this is done by hand, with a research assistant reading each document and filling in a spreadsheet against a codebook the researcher wrote.\nLLMs can now automate a large share of that mechanical work. But every researcher who tries currently reinvents the same pipeline from scratch — and, more importantly, most skip the part that actually makes automated coding trustworthy: checking whether the model followed this specific codebook, or fell back on its own generic notion of the concept.",
+    "text": "Turning messy text into structured data is a routine need: is this article about a protest? does this statement support or oppose a policy? Does this support ticket describe a billing issue or a bug? Today that mostly means someone reading every document by hand and filling in a spreadsheet against rules they wrote themselves — a codebook.\nLLMs can automate a lot of that reading. But everyone who tries ends up reinventing the same pipeline from scratch — and, more importantly, most skip the part that actually makes automated coding trustworthy: checking whether the model followed your specific rules, or just fell back on its own generic idea of the concept.",
     "crumbs": [
       "Overview"
     ]
@@ -177,19 +177,19 @@
   {
     "objectID": "index.html#the-problem",
     "href": "index.html#the-problem",
-    "title": "Cifra",
+    "title": "Decifra",
     "section": "",
-    "text": "Social scientists — political science, sociology, geography — routinely turn unstructured text into categorical data: is this news article describing a protest? does this public statement support or oppose a policy? Historically this is done by hand, with a research assistant reading each document and filling in a spreadsheet against a codebook the researcher wrote.\nLLMs can now automate a large share of that mechanical work. But every researcher who tries currently reinvents the same pipeline from scratch — and, more importantly, most skip the part that actually makes automated coding trustworthy: checking whether the model followed this specific codebook, or fell back on its own generic notion of the concept.",
+    "text": "Turning messy text into structured data is a routine need: is this article about a protest? does this statement support or oppose a policy? Does this support ticket describe a billing issue or a bug? Today that mostly means someone reading every document by hand and filling in a spreadsheet against rules they wrote themselves — a codebook.\nLLMs can automate a lot of that reading. But everyone who tries ends up reinventing the same pipeline from scratch — and, more importantly, most skip the part that actually makes automated coding trustworthy: checking whether the model followed your specific rules, or just fell back on its own generic idea of the concept.",
     "crumbs": [
       "Overview"
     ]
   },
   {
-    "objectID": "index.html#what-cifra-is",
-    "href": "index.html#what-cifra-is",
-    "title": "Cifra",
-    "section": "What Cifra is",
-    "text": "What Cifra is\nCifra is a local-first tool: the researcher authors a codebook (a concept, its categories, definitions, examples, boundary notes), points it at a text corpus, and the software calls an LLM to fill in a structured results table — one category, one rationale, one quoted evidence span per document. Every result carries a full audit trail: the exact prompt sent, the raw response received, which model and provider mode produced it.\nIt is not a manual qualitative-coding tool — Taguette, QualCoder, and QualiLab already do that well. Cifra is closer to the inverse: it automates the mechanical categorization step so a human doesn’t have to read every row, while treating the researcher’s judgment — codebook design, model/parameter choices, and the decision of whether automated output is reliable enough to become research data — as non-negotiable and non-automatable.",
+    "objectID": "index.html#what-decifra-is",
+    "href": "index.html#what-decifra-is",
+    "title": "Decifra",
+    "section": "What Decifra is",
+    "text": "What Decifra is\nDecifra is a local-first tool: you author a codebook (a concept, its categories, definitions, examples, boundary notes), point it at a text corpus, and the software calls an LLM to fill in a structured results table — one category, one rationale, one quoted evidence span per document. Every result carries a full audit trail: the exact prompt sent, the raw response received, which model and provider mode produced it.\nIt is not a manual qualitative-coding tool — Taguette, QualCoder, and QualiLab already do that well. Decifra is closer to the inverse: it automates the mechanical categorization step so a human doesn’t have to read every row, while treating your own judgment — codebook design, model/parameter choices, and the decision of whether automated output is reliable enough to become real data — as non-negotiable and non-automatable.",
     "crumbs": [
       "Overview"
     ]
@@ -197,9 +197,9 @@
   {
     "objectID": "index.html#what-automated-does-not-mean",
     "href": "index.html#what-automated-does-not-mean",
-    "title": "Cifra",
+    "title": "Decifra",
     "section": "What “automated” does not mean",
-    "text": "What “automated” does not mean\nAutomation applies to one step: turning text into a category without a human reading every row. It does not remove the researcher from anything else. The researcher is still solely responsible for:\n\ndesigning the codebook — which categories exist, how each is defined, where the conceptual boundaries sit;\nchoosing the pipeline — which corpus, which model, which provider;\ninterpreting results; and\ndeciding, via validation, whether automated coding is reliable enough to use as data.\n\nThe Codebook Editor is the most important screen in the software, not a form to get through before “the real part.”",
+    "text": "What “automated” does not mean\nAutomation applies to one step: turning text into a category without a human reading every row. It does not remove you from anything else. You are still solely responsible for:\n\ndesigning the codebook — which categories exist, how each is defined, where the conceptual boundaries sit;\nchoosing the pipeline — which corpus, which model, which provider;\ninterpreting results; and\ndeciding, via validation, whether automated coding is reliable enough to use as data.\n\nThe Codebook Editor is the most important screen in the software, not a form to get through before “the real part.”",
     "crumbs": [
       "Overview"
     ]
@@ -207,9 +207,9 @@
   {
     "objectID": "index.html#why-validation-is-not-a-footnote",
     "href": "index.html#why-validation-is-not-a-footnote",
-    "title": "Cifra",
+    "title": "Decifra",
     "section": "Why validation is not a footnote",
-    "text": "Why validation is not a footnote\nHalterman & Keith (2025) — and the same group’s 2026 follow-up — show that off-the-shelf LLMs frequently ignore a codebook’s specific operationalization and substitute their own generic notion of a concept instead: including a labor strike under “protest” even when the codebook explicitly excludes it, for example. A model that looks fluent is not the same as a model that followed the instructions.\nCifra ran this failure mode for real, not hypothetically. See Why Validation Matters for the numbers: an under-specified codebook produced results with essentially zero discriminating power on a third of a real test batch, and a hypothesis’s own scope condition got silently ignored. Enriching the codebook — not switching models — fixed both, and the before/after is verifiable, not just asserted.",
+    "text": "Why validation is not a footnote\nHalterman & Keith (2025) — and the same group’s 2026 follow-up — show that off-the-shelf LLMs frequently ignore a codebook’s specific operationalization and substitute their own generic notion of a concept instead: including a labor strike under “protest” even when the codebook explicitly excludes it, for example. A model that looks fluent is not the same as a model that followed the instructions.\nDecifra ran this failure mode for real, not hypothetically. See Why Validation Matters for the numbers: an under-specified codebook produced results with essentially zero discriminating power on a third of a real test batch, and a hypothesis’s own scope condition got silently ignored. Enriching the codebook — not switching models — fixed both, and the before/after is verifiable, not just asserted.",
     "crumbs": [
       "Overview"
     ]
@@ -217,9 +217,9 @@
   {
     "objectID": "index.html#current-status",
     "href": "index.html#current-status",
-    "title": "Cifra",
+    "title": "Decifra",
     "section": "Current status",
-    "text": "Current status\nCifra is pre-1.0, under active development. As of this page:\n\nCorpus import — CSV/XLSX/pasted text, with column mapping.\nCodebook editor — structured form with a live YAML preview.\nRuns — kick off an extraction against a corpus + codebook, watch it progress, pick API-key mode (schema enforced via instructor) or CLI mode (any installed CLI the researcher already has a subscription for).\nResults — browsable table, inline edits, CSV/XLSX/JSON export, and a per-run GUIDE-LLM-shaped AI-use disclosure report.\nValidation — gold-label import (including round-tripping with QualiLab), Cohen’s kappa, precision/recall/F1 per category.\n\nSee How It Works for the pipeline end to end, and Architecture for the technical design and why it looks the way it does.\nSource, issues, and full history: github.com/mancano-tales/cifra-text-as-data.",
+    "text": "Current status\nDecifra is pre-1.0, under active development. As of this page:\n\nCorpus import — CSV/XLSX/pasted text, with column mapping.\nCodebook editor — structured form with a live YAML preview.\nRuns — kick off an extraction against a corpus + codebook, watch it progress, pick API-key mode (schema enforced via instructor) or CLI mode (any installed CLI you already have a subscription for).\nResults — browsable table, inline edits, CSV/XLSX/JSON export, and a per-run GUIDE-LLM-shaped AI-use disclosure report.\nValidation — gold-label import (including round-tripping with QualiLab), Cohen’s kappa, precision/recall/F1 per category.\n\nSee How It Works for the pipeline end to end, and Architecture for the technical design and why it looks the way it does.\nSource, issues, and full history: github.com/mancano-tales/decifra-text-as-data.",
     "crumbs": [
       "Overview"
     ]
@@ -251,7 +251,7 @@
     "href": "architecture.html#why-not-a-single-file-browser-tool-like-qualilab",
     "title": "Architecture",
     "section": "Why not a single-file browser tool like QualiLab",
-    "text": "Why not a single-file browser tool like QualiLab\nThe honest version of this comparison, corrected after actually reading QualiLab’s source rather than assuming: QualiLab is not purely manual — it has five LLM-backed “Auto-coding” assistants and a blind-evaluation feature conceptually close to a validation step. The real difference is architectural, not manual-vs-automated:\n\nScale ceiling: QualiLab caps a single send at roughly 600,000 characters total, with documents beyond that dropped entirely. Cifra needs to run hundreds or thousands of LLM calls over a full corpus with no such ceiling.\nExecution model: QualiLab’s AI calls are synchronous within the open browser tab, with no persistent job queue and no resumable run if the tab closes — a direct consequence of its deliberate single-file, no-server-of-its-own design. Cifra’s batched calls need retry, caching, and cost tracking, and must survive closing the tab; that calls for a real backend process.\nCredential handling: routing an API key through browser JavaScript alone is uncomfortable and unsafe for a tool meant to run large, billed batches. A local backend keeps the key server-side, never shipped to the page.\n\nThis is not a reason to ignore QualiLab — it’s the reason Cifra treats interoperability with it as a real priority (round-tripping corpora and gold labels) rather than duplicating its mature manual-review UI from scratch. See the codebook/data model below for where that interop lands.",
+    "text": "Why not a single-file browser tool like QualiLab\nThe honest version of this comparison, corrected after actually reading QualiLab’s source rather than assuming: QualiLab is not purely manual — it has five LLM-backed “Auto-coding” assistants and a blind-evaluation feature conceptually close to a validation step. The real difference is architectural, not manual-vs-automated:\n\nScale ceiling: QualiLab caps a single send at roughly 600,000 characters total, with documents beyond that dropped entirely. Decifra needs to run hundreds or thousands of LLM calls over a full corpus with no such ceiling.\nExecution model: QualiLab’s AI calls are synchronous within the open browser tab, with no persistent job queue and no resumable run if the tab closes — a direct consequence of its deliberate single-file, no-server-of-its-own design. Decifra’s batched calls need retry, caching, and cost tracking, and must survive closing the tab; that calls for a real backend process.\nCredential handling: routing an API key through browser JavaScript alone is uncomfortable and unsafe for a tool meant to run large, billed batches. A local backend keeps the key server-side, never shipped to the page.\n\nThis is not a reason to ignore QualiLab — it’s the reason Decifra treats interoperability with it as a real priority (round-tripping corpora and gold labels) rather than duplicating its mature manual-review UI from scratch. See the codebook/data model below for where that interop lands.",
     "crumbs": [
       "Overview",
       "Architecture"

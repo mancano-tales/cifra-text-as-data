@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>How It Works – Cifra</title>
+<title>How It Works – Decifra</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -84,9 +84,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-2cac254471013f9d064481f344244ff3.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-cc252278df9996d5009c7196595300d4.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="site_libs/bootstrap/bootstrap-2cac254471013f9d064481f344244ff3.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-684b346cd06735d7b2b1c056a1b594bf.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-a0982ed8f5c75538ef19687837461216.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-684b346cd06735d7b2b1c056a1b594bf.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -117,9 +117,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <link rel="stylesheet" href="styles.css">
-<meta property="og:title" content="How It Works – Cifra">
+<meta property="og:title" content="How It Works – Decifra">
 <meta property="og:description" content="The pipeline, end to end, with what actually gets sent to the model">
-<meta property="og:site_name" content="Cifra">
+<meta property="og:site_name" content="Decifra">
 </head>
 
 <body class="nav-sidebar docked nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
@@ -292,7 +292,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a class="navbar-brand" href="./index.html">
-    <span class="navbar-title">Cifra</span>
+    <span class="navbar-title">Decifra</span>
     </a>
   </div>
             <div id="quarto-search" class="" title="Search"></div>
@@ -320,7 +320,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/mancano-tales/cifra-text-as-data" target="_blank"> <i class="bi bi-github" role="img">
+    <a class="nav-link" href="https://github.com/mancano-tales/decifra-text-as-data" target="_blank"> <i class="bi bi-github" role="img">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
@@ -399,7 +399,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#results-export-and-disclosure" id="toc-results-export-and-disclosure" class="nav-link" data-scroll-target="#results-export-and-disclosure">6. Results, export, and disclosure</a></li>
   <li><a href="#validation" id="toc-validation" class="nav-link" data-scroll-target="#validation">7. Validation</a></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/mancano-tales/cifra-text-as-data/blob/main/how-it-works.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/mancano-tales/cifra-text-as-data/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/mancano-tales/decifra-text-as-data/blob/main/how-it-works.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/mancano-tales/decifra-text-as-data/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -474,7 +474,7 @@ Categories:
 </section>
 <section id="calling-the-model-two-provider-modes-one-interface" class="level2">
 <h2 class="anchored" data-anchor-id="calling-the-model-two-provider-modes-one-interface">4. Calling the model — two provider modes, one interface</h2>
-<p>Cifra’s provider layer is deliberately agent-agnostic. Both modes implement the same <code>Provider.extract(messages, schema)</code> interface, so the extraction engine never has to know which one is active:</p>
+<p>Decifra’s provider layer is deliberately agent-agnostic. Both modes implement the same <code>Provider.extract(messages, schema)</code> interface, so the extraction engine never has to know which one is active:</p>
 <p><strong>API-key mode</strong> — a direct key (Anthropic or OpenAI) via <a href="https://github.com/jxnl/instructor"><code>instructor</code></a>. Schema is enforced at the API level through function/tool calling: the provider cannot return a response that fails to validate. This is the reliable path for a real coding run.</p>
 <p><strong>CLI mode</strong> — shells out to an already-installed CLI the researcher has a subscription for (Claude Code, a Codex-style CLI, or any command that takes a prompt and returns text). No API-level schema enforcement exists here — the schema is requested in the prompt text, and the response is scanned for the first JSON object that actually validates against it, with up to three retries on malformed output. This is explicitly best-effort: the trade-off for not needing a separately billed API key.</p>
 </section>
@@ -496,7 +496,7 @@ Categories:
 </section>
 <section id="validation" class="level2">
 <h2 class="anchored" data-anchor-id="validation">7. Validation</h2>
-<p>Once a subset of documents has human-coded gold labels — either imported directly as a plain CSV, or round-tripped from a <a href="https://github.com/luizpf42/QualiLab">QualiLab</a> manual-coding project — Cifra computes accuracy, Cohen’s kappa, and per-category precision/recall/F1 against a run’s output, and surfaces the disagreements for manual reading. See <a href="./validation.html">Why Validation Matters</a> for why this step exists at all and what it caught in practice.</p>
+<p>Once a subset of documents has human-coded gold labels — either imported directly as a plain CSV, or round-tripped from a <a href="https://github.com/luizpf42/QualiLab">QualiLab</a> manual-coding project — Decifra computes accuracy, Cohen’s kappa, and per-category precision/recall/F1 against a run’s output, and surfaces the disagreements for manual reading. See <a href="./validation.html">Why Validation Matters</a> for why this step exists at all and what it caught in practice.</p>
 
 
 </section>
@@ -588,7 +588,7 @@ Categories:
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/mancano-tales\.github\.io\/cifra-text-as-data\/");
+        var filterRegex = new RegExp("https:\/\/mancano-tales\.github\.io\/decifra-text-as-data\/");
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
@@ -942,11 +942,11 @@ Categories:
 </div>   
     <div class="nav-footer-center">
 <p>Built with <a href="https://quarto.org">Quarto</a></p>
-<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/mancano-tales/cifra-text-as-data/blob/main/how-it-works.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/mancano-tales/cifra-text-as-data/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/mancano-tales/decifra-text-as-data/blob/main/how-it-works.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/mancano-tales/decifra-text-as-data/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
       <ul class="footer-items list-unstyled">
     <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/mancano-tales/cifra-text-as-data" target="_blank">
+    <a class="nav-link" href="https://github.com/mancano-tales/decifra-text-as-data" target="_blank">
       <i class="bi bi-github" role="img">
 </i> 
     </a>
