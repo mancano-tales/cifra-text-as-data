@@ -228,6 +228,7 @@ def main() -> None:
         docs = json.load(f)
 
     db_path = Path("data/v7_tuning_experiments.sqlite")
+    db_path.parent.mkdir(parents=True, exist_ok=True)
     if db_path.exists():
         db_path.unlink()
     engine = get_engine(f"sqlite:///{db_path}")
