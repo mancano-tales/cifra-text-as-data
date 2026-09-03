@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import ftfy
+from pydantic import BaseModel, Field, create_model
 
 VERBAL_PROBABILITY_LABELS = [
     "quase_certa",
@@ -262,6 +265,90 @@ def build_enriched_hypothesis_codebook_spec(pair_code: str, side_label: str) -> 
         "description": description,
         "categories": categories,
     }
+
+
+def build_joint_hypothesis_messages_and_schema(
+    pair_code: str, evidence_text: str
+) -> tuple[list[dict], type[BaseModel]]:
+    """Build a single-call prompt that scores BOTH sides of a hypothesis
+    pair against one evidence text at once, instead of the two separate,
+    blind calls `build_enriched_hypothesis_codebook_spec` produces.
+
+    Experimental (V7 pipeline tuning item 3, see
+    docs/research/2026-09-02_llm_pipeline_verification_methodology.md's
+    "structural limitation" section): the two-blind-calls design means
+    side A's call never sees side A's own answer for side B, so nothing
+    forces a direct comparison between them -- this is what let both
+    sides of a pair score `muito_provavel` in the pre-enrichment pilot,
+    near-zero discriminating power. A joint call can't fix a bad
+    codebook, but it tests whether forced side-by-side comparison changes
+    the answer even with the *same* enriched instructions.
+
+    Deliberately NOT built on the general `Codebook` class: that class is
+    architected around exactly one `categoria` field per call, and a
+    joint two-hypothesis judgment fundamentally needs two -- forcing it
+    through `Codebook` would mean changing the general engine to support
+    one V7-specific experiment, which is exactly what AGENTS.md's
+    "keep codebook separate from extraction" rule warns against. This
+    stays self-contained in pilot_v7.py instead, calling `CliProvider`
+    directly with a hand-built schema."""
+    pair = HYPOTHESIS_DEFINITIONS[pair_code]
+    side_a, side_b = pair["a"], pair["b"]
+
+    boundary_notes_block = "\n".join(
+        f"- {label}: {VERBAL_PROBABILITY_DEFINITIONS[label]} {PROBABILITY_BOUNDARY_NOTES[label]}"
+        for label in VERBAL_PROBABILITY_LABELS
+    )
+
+    instructions = (
+        "You will evaluate ONE piece of evidence against BOTH sides of a competing hypothesis "
+        "pair at once, from Bayesian process tracing (Fairfield & Charman 2022). For EACH "
+        "hypothesis, ask: if this hypothesis were true, how expected would this evidence be?\n\n"
+        f"Research question: {pair['primary_question']}\n"
+        f"This pair asks: {pair['secondary_question']}\n\n"
+        f"HYPOTHESIS A -- {side_a['name']}:\n"
+        f"Mechanism: {side_a['mechanism']}\n"
+        f"Premises: {side_a['premises']}\n\n"
+        f"HYPOTHESIS B -- {side_b['name']}:\n"
+        f"Mechanism: {side_b['mechanism']}\n"
+        f"Premises: {side_b['premises']}\n\n"
+        "Critical instructions:\n"
+        "1. Scope check: for EACH hypothesis, verify the evidence actually concerns the "
+        "specific actor/mechanism/party type that hypothesis names -- do not score high just "
+        "because the topic is generally related to the research question.\n"
+        "2. Discriminating power, scored jointly: score each hypothesis on how much MORE "
+        "expected this evidence is under THAT hypothesis than under the other one above. "
+        "Because you are seeing both at once, a score on one side should be informed by how "
+        "well the SAME evidence fits the other side -- if the evidence is roughly equally "
+        "expected under both, BOTH should score 'cinquenta_e_cinquenta'; do not let one "
+        "hypothesis's plausibility inflate the other's score by mere association with the same "
+        "topic.\n"
+        "3. Consistency: if evidence shows a policy being tightened, loosened, or reversed, "
+        "state which direction of change each hypothesis's own mechanism predicts before "
+        "scoring.\n\n"
+        "Category definitions and boundary notes (apply to both categoria_a and categoria_b):\n"
+        f"{boundary_notes_block}"
+    )
+
+    labels = tuple(VERBAL_PROBABILITY_LABELS)
+    schema = create_model(
+        "JointHypothesisExtraction",
+        categoria_a=(Literal[labels], Field(description=f"Probability score for hypothesis A ({side_a['name']}).")),
+        justificativa_a=(str, Field(description="Free-text rationale for categoria_a.")),
+        trecho_evidencia_a=(str, Field(description="Verbatim quote grounding categoria_a.")),
+        categoria_b=(Literal[labels], Field(description=f"Probability score for hypothesis B ({side_b['name']}).")),
+        justificativa_b=(str, Field(description="Free-text rationale for categoria_b.")),
+        trecho_evidencia_b=(str, Field(description="Verbatim quote grounding categoria_b.")),
+    )
+    # Two messages, not one -- lets CliProvider._build_prompt insert its own
+    # instructions/evidence delimiter automatically (finding from tuning
+    # item 2), the same way every other codebook's prompt gets it, instead
+    # of duplicating that formatting decision here.
+    messages = [
+        {"role": "system", "content": instructions},
+        {"role": "user", "content": evidence_text},
+    ]
+    return messages, schema
 
 
 def select_gold_rows(
