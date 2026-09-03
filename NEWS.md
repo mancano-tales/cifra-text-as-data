@@ -1,5 +1,29 @@
 # NEWS
 
+## 2026-09-02 (7)
+
+- Strategy pass after the MVP closed: a full read of the repository
+  (governance files, all 116 commits, every backend module and frontend
+  component, specs/plans, research reports; suite re-run, 238 passing but
+  only with `PYTHONPATH=src`, because the global editable install points
+  at a deleted worktree) written up as
+  `docs/research/2026-09-02_state_of_the_project_diagnosis_and_distribution.md`.
+  Records the author's reframing of Cifra as general-purpose software,
+  what is right (the auditable pipeline exists end to end; the V7
+  codebook-enrichment result is the product's thesis demonstrated), where
+  it drifted (single-variable codebook with Portuguese field names
+  hardcoded across engine/DB/frontend; credentials only via env var; no
+  cost estimate; sequential, uncancellable, unrecoverable jobs; no delete;
+  backend does not serve the frontend; Anthropic/OpenAI only; a specific
+  study inside the product package; both READMEs describing features that
+  do not exist), a cost comparison of distribution paths (recommends
+  pipx/uv install first, then PyInstaller + pywebview, Tauri only if that
+  proves insufficient, and budgeting code signing now), a build order, and
+  trajectory risks. The diagnosis is turned into `docs/ROADMAP.md`: task
+  briefs R0.1 … R7.2 written to be handed to a fresh agent session with no
+  other context, each with dependencies, size, whether a spec is required
+  first, and acceptance criteria. `TODO.md` Pending now points there.
+
 ## 2026-09-02 (6)
 
 - Slice 4, Validation screen — the last unbuilt screen from `AGENTS.md`'s

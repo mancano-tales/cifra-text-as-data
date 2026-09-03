@@ -2,8 +2,20 @@
 
 ## Pending
 
-(none — every screen in `AGENTS.md`'s original MVP list is now built;
-see Slice 4 in Done below)
+- 2026-09-02 — The post-MVP backlog now lives in `docs/ROADMAP.md`
+  (self-contained task briefs R0.1 … R7.2, ordered by dependency), derived
+  from the diagnosis in
+  `docs/research/2026-09-02_state_of_the_project_diagnosis_and_distribution.md`.
+  Pick the lowest-numbered brief whose dependencies are done; mark status
+  in the ROADMAP itself. Headline items, in order: fix both READMEs (they
+  describe features that do not exist); multi-variable codebooks with
+  neutral English field names (before any external user has a data file);
+  settings screen with persisted credentials; cost estimate before a run;
+  delete endpoints; backend serving the built frontend + `cifra` entry
+  point + DB in the user data dir; cancel/resume; local/OpenAI-compatible
+  provider; then pilot users, then packaging (PyInstaller + pywebview
+  before Tauri), then parallelism, then Krippendorff/AC1 and the other
+  scientific-depth items, then the license decision.
 
 ## Prospective
 

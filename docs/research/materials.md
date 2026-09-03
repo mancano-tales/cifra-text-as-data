@@ -33,6 +33,7 @@ This directory catalogs primary research papers, literature reviews, codebase de
 | **[`2026-08-31_adversarial_codebase_audit_and_pitfalls.md`](2026-08-31_adversarial_codebase_audit_and_pitfalls.md)** | Zero-happy-path adversarial failure mode analysis and 5 real-world edge-case mitigations for Cifra (SQLite WAL, Windows encoding, etc.). |
 | **[`2026-09-01_dataluta_paper_analysis_and_cifra_synergy.md`](2026-09-01_dataluta_paper_analysis_and_cifra_synergy.md)** | Empirical analysis of the NERA/UNESP DATALUTA paper, BERTimbau limitations, and Cifra orchestration synergy. |
 | **[`2026-09-01_halterman_keith_codebook_llms_dialogue_and_cifra.md`](2026-09-01_halterman_keith_codebook_llms_dialogue_and_cifra.md)** | Detailed dialogue with Halterman & Keith (2025) mapping Stage 0–4 framework onto Cifra's architecture. |
+| **[`2026-09-02_state_of_the_project_diagnosis_and_distribution.md`](2026-09-02_state_of_the_project_diagnosis_and_distribution.md)** | Critical diagnosis of the MVP as built vs. the general-purpose product vision, distribution-path cost comparison (pipx / PyInstaller+pywebview / Tauri / hosted), recommended build order, and trajectory risks. Feeds [`docs/ROADMAP.md`](../ROADMAP.md). |
 
 ---
 
