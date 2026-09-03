@@ -136,9 +136,29 @@ class CliProvider(Provider):
         # inspect later when a result looks off.
         return ProviderResult(parsed=parsed, prompt=prompt, raw_response=result.stdout)
 
+    _INSTRUCTIONS_EVIDENCE_DELIMITER = "--- FIM DAS INSTRUÇÕES — TEXTO A CLASSIFICAR ABAIXO ---"
+
     @staticmethod
     def _build_prompt(messages: list[dict], schema: type[BaseModel]) -> str:
-        parts = [m["content"] for m in messages]
+        # `Codebook.build_messages` always appends the actual document to
+        # classify as the final message (after any system instructions and
+        # few-shot examples) -- true for every codebook, not just V7's.
+        # Flattening everything with a bare "\n\n" join gives a CLI model
+        # no structural signal for where fixed instructions end and the
+        # variable, per-document evidence begins, unlike a real chat API
+        # where role separation (system/user) already marks that boundary.
+        # An explicit delimiter right before the last message restores
+        # that signal for the CLI path specifically.
+        parts = [m["content"] for m in messages[:-1]]
+        if parts:
+            # Only insert the delimiter when there's actually a preceding
+            # instructions/example block to mark the end of -- a
+            # single-message call (just the text to classify, no system
+            # instructions) has nothing to delimit against, and prefixing
+            # a marker onto the caller's only content would be pure noise.
+            parts.append(f"{CliProvider._INSTRUCTIONS_EVIDENCE_DELIMITER}\n\n{messages[-1]['content']}")
+        else:
+            parts.append(messages[-1]["content"])
         schema_json = json.dumps(schema.model_json_schema())
         parts.append(
             "Respond with ONLY a single JSON object matching this JSON Schema, "
