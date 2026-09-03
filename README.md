@@ -1,18 +1,18 @@
 <!-- 🇺🇸 English — [🇧🇷 versão em português](README.pt-BR.md) -->
 
-# cifra-text-as-data — Cifra
+# decifra-text-as-data — Decifra
 
-**Cifra** is a local-first tool for turning unstructured text (news articles, policy statements, police reports) into categorical data using an LLM against an explicit **codebook** you define — with a validation step against human-coded gold labels, because LLMs do not follow a codebook's specific operationalization with perfect fidelity.
+**Decifra** is a local-first tool for turning unstructured text (news articles, policy statements, police reports) into categorical data using an LLM against an explicit **codebook** you define — with a validation step against human-coded gold labels, because LLMs do not follow a codebook's specific operationalization with perfect fidelity.
 
-It is not a manual qualitative-coding tool (see [Taguette](https://www.taguette.org/), [QualCoder](https://github.com/ccbogel/QualCoder), or [QualiLab](https://github.com/LuizPF42/QualiLab) for that). You define a codebook, point it at a corpus, and Cifra runs the LLM over every document and fills an output table automatically.
+It is not a manual qualitative-coding tool (see [Taguette](https://www.taguette.org/), [QualCoder](https://github.com/ccbogel/QualCoder), or [QualiLab](https://github.com/LuizPF42/QualiLab) for that). You define a codebook, point it at a corpus, and Decifra runs the LLM over every document and fills an output table automatically.
 
-**Status:** MVP complete — all five screens exist (Corpus, Codebook, Runs, Results, Validation). No packaged installer yet; running Cifra today requires starting two dev servers from a terminal (see "Running it" below).
+**Status:** MVP complete — all five screens exist (Corpus, Codebook, Runs, Results, Validation). No packaged installer yet; running Decifra today requires starting two dev servers from a terminal (see "Running it" below).
 
 ---
 
-## Why Cifra?
+## Why Decifra?
 
-LLM text classification risks **construct validity**: does the model actually apply *your* specific operationalization of a concept, or does it fall back on a generic pre-trained notion (e.g. counting a labor strike as a "protest" even when your codebook excludes it)? See Halterman & Keith, *"Codebook LLMs: Evaluating LLMs as Measurement Tools for Political Science Concepts"* (*Political Analysis*, 2025). Cifra treats validating LLM output against human coding as a first-class step in the pipeline, not an afterthought.
+LLM text classification risks **construct validity**: does the model actually apply *your* specific operationalization of a concept, or does it fall back on a generic pre-trained notion (e.g. counting a labor strike as a "protest" even when your codebook excludes it)? See Halterman & Keith, *"Codebook LLMs: Evaluating LLMs as Measurement Tools for Political Science Concepts"* (*Political Analysis*, 2025). Decifra treats validating LLM output against human coding as a first-class step in the pipeline, not an afterthought.
 
 ---
 
@@ -47,7 +47,7 @@ You'll also need either an `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` environment v
 
 ## Running it (development)
 
-There's no packaged app yet — running Cifra today means starting the FastAPI backend and the Vite frontend together. `scripts/dev.sh` (macOS/Linux/Git Bash) and `scripts/dev.ps1` (native PowerShell) do that with one command instead of two terminals:
+There's no packaged app yet — running Decifra today means starting the FastAPI backend and the Vite frontend together. `scripts/dev.sh` (macOS/Linux/Git Bash) and `scripts/dev.ps1` (native PowerShell) do that with one command instead of two terminals:
 
 ```bash
 scripts/dev.sh              # backend on :8000, frontend on :5173
@@ -134,4 +134,4 @@ Runs 238 tests across the codebook engine, both provider modes, the SQLite model
 
 ## Packaging (not started)
 
-The plan (see `AGENTS.md` § "Product trajectory") is a packaged desktop app — the Python backend compiled to a single binary, run locally, so installing Cifra is "download and open" rather than "clone a repo and run two dev servers." That work has not started. `AGENTS.md` gates it behind the pipeline being validated with real use first.
+The plan (see `AGENTS.md` § "Product trajectory") is a packaged desktop app — the Python backend compiled to a single binary, run locally, so installing Decifra is "download and open" rather than "clone a repo and run two dev servers." That work has not started. `AGENTS.md` gates it behind the pipeline being validated with real use first.

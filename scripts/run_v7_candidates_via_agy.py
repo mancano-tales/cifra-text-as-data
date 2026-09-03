@@ -1,10 +1,10 @@
 """Run the 16 candidate V7 evidence/hypothesis-pair evaluations through the
-real Cifra pipeline (codebook -> DB -> run_extraction -> CliProvider),
+real Decifra pipeline (codebook -> DB -> run_extraction -> CliProvider),
 using Google Antigravity's `agy` CLI instead of Claude.
 
 This replaces the earlier hand-drafted classifications (data/
 v7_pilot_draft_classifications.csv) with actual LLM output from the real
-extraction engine -- the point being to exercise Cifra itself, not to have
+extraction engine -- the point being to exercise Decifra itself, not to have
 an agent eyeball each article and write down a guess.
 
 Usage:

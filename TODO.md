@@ -2,6 +2,33 @@
 
 ## Pending
 
+- 2026-09-03 — Product renamed Cifra → Decifra; GitHub repo is now
+  `mancano-tales/decifra-text-as-data` (see `NEWS.md` for the full list of
+  files touched). The local working directory on this machine still reads
+  `cifra-text-as-data` on purpose — it is the hub for several active `git
+  worktree` checkouts (`.claude/worktrees/multi-provider-llm-2`,
+  `.claude/worktrees/v7-pipeline-tuning`, plus the external
+  `cifra-text-as-data-r1.1` and `text-as-data-r24` worktrees), and
+  renaming it would break their linked `.git` metadata. Once those
+  worktrees are retired/merged, rename the folder to
+  `decifra-text-as-data` and run `git worktree repair` (or re-add) for any
+  that remain, per `docs/MULTI_AGENT_WORKTREES.md`.
+- 2026-09-03 — `docs/ROADMAP.md` gained four new briefs from the CatLLM
+  deep dive (`docs/research/2026-09-02_catllm_deep_dive_and_honest_comparison.md`,
+  a real clone-and-read verification, not desk research): R2.8 (Claude
+  Agent SDK as a second, more robust CLI-mode execution path — fixes the
+  same class of Windows CLI bug Decifra already patched once, plus session
+  sealing against `CLAUDE.md` leakage into extraction prompts), R2.9
+  (Decifra as an MCP server, so a Claude Desktop/Claude Code session can
+  drive Decifra's read operations directly — author-requested 2026-09-03,
+  explicitly not a CatLLM catch-up item, Decifra-original scope), a note on
+  R2.6 pointing to CatLLM's more mature Ollama tooling as an implementation
+  reference, and R6.2b (multi-model ensemble consensus, distinct from
+  R6.2's same-model repeat majority vote — a no-gold-set-needed reliability
+  signal CatLLM has and Decifra doesn't). Author confirmed wanting both R2.8
+  and R2.9 (not just one) when asked to disambiguate "MCP" from the
+  Agent-SDK idea, since the two are easily conflated but solve different
+  problems.
 - 2026-09-02 — The post-MVP backlog now lives in `docs/ROADMAP.md`
   (self-contained task briefs R0.1 … R7.2, ordered by dependency), derived
   from the diagnosis in
@@ -208,10 +235,10 @@
   succeeds) rather than trusting the YAML would work once pushed.
 - 2026-09-02 — GUIDE-LLM-shaped AI-use disclosure report per run
   (`GET /runs/{id}/disclosure`), adopted after studying the DAAF framework
-  (`DAAF-Contribution-Community/daaf`) for lessons applicable to Cifra. New
+  (`DAAF-Contribution-Community/daaf`) for lessons applicable to Decifra. New
   `disclosure.py` maps the real GUIDE-LLM checklist (13 items across
   sections A-G, fetched from the actual checklist page rather than
-  guessed — llm-checklist.com/checklist) onto what Cifra already records
+  guessed — llm-checklist.com/checklist) onto what Decifra already records
   per run: model/provider/access-mode (`RunRecord` gained `provider_mode`/
   `provider_detail`, persisted at creation instead of only living
   transiently on `CreateRunRequest`), the exact prompt sent per document

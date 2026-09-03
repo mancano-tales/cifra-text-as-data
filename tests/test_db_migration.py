@@ -1,6 +1,6 @@
 """Regression tests for the additive column migration in db.py's
 get_engine() -- the mechanism that fixes the recurring "existing shared
-codifica.sqlite doesn't have a column the model now expects" bug (hit twice
+decifra.sqlite doesn't have a column the model now expects" bug (hit twice
 already: prompt_sent/raw_response, then provider_mode/provider_detail)."""
 
 import sqlite3

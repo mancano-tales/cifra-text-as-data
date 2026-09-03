@@ -1,4 +1,4 @@
-# Start the Cifra backend (FastAPI/uvicorn) and frontend (Vite) together with
+# Start the Decifra backend (FastAPI/uvicorn) and frontend (Vite) together with
 # one command, for local development. Not a replacement for real packaging
 # (see AGENTS.md's Phase 2 plan) -- just removes the "two terminals" step
 # from the manual dev workflow documented in README.md.
@@ -24,7 +24,7 @@ $frontend = Start-Process -PassThru -NoNewWindow -FilePath "npm" `
     -WorkingDirectory (Join-Path $repoRoot "frontend")
 
 Write-Host ""
-Write-Host "Cifra is starting up:"
+Write-Host "Decifra is starting up:"
 Write-Host "  Backend:  http://localhost:$BackendPort"
 Write-Host "  Frontend: http://localhost:$FrontendPort"
 Write-Host ""
@@ -34,7 +34,7 @@ try {
     Wait-Process -Id $backend.Id, $frontend.Id
 } finally {
     Write-Host ""
-    Write-Host "Stopping Cifra..."
+    Write-Host "Stopping Decifra..."
     Stop-Process -Id $backend.Id -ErrorAction SilentlyContinue
     Stop-Process -Id $frontend.Id -ErrorAction SilentlyContinue
 }

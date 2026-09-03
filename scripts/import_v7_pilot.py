@@ -1,5 +1,5 @@
 """Import the 2 usable V7 pilot rows (see docs/superpowers/plans/2026-08-31-slice-1-backend-skeleton.md)
-into the Cifra SQLite DB, and write the 4 per-hypothesis-side codebook
+into the Decifra SQLite DB, and write the 4 per-hypothesis-side codebook
 YAML files plus a gold-labels CSV for later comparison.
 
 Re-running this script is safe: `corpus_id` (e.g. "v7_pilot_H1") is a
@@ -11,7 +11,7 @@ evidence as a batch. Idempotency dedupes instead on the pair
 after a new evidence row has been hand-coded under an already-seen pair
 still imports the new row, while a truly-already-seen (corpus_id,
 fk_id_ev) pair is skipped and reported. This does NOT pick up changes to
-already-seeded rows -- delete `codifica.sqlite` first to fully reseed from
+already-seeded rows -- delete `decifra.sqlite` first to fully reseed from
 scratch.
 
 Usage:
@@ -130,7 +130,7 @@ def main(xlsx_path: str) -> None:
     for row in skipped:
         print(f"  skipped {row['fk_id_ev']!r}: group={row.get('fk_hypothesis_group')!r}")
 
-    engine = get_engine("sqlite:///codifica.sqlite")
+    engine = get_engine("sqlite:///decifra.sqlite")
     gold_rows = []
 
     with Session(engine) as session:
@@ -150,7 +150,7 @@ def main(xlsx_path: str) -> None:
             if existing_doc is not None:
                 print(
                     f"  skipping seed for {pair_code} evidence {row['fk_id_ev']!r}: already present "
-                    f"in codifica.sqlite (document id {existing_doc.id}) — delete codifica.sqlite first "
+                    f"in decifra.sqlite (document id {existing_doc.id}) — delete decifra.sqlite first "
                     "to reseed from scratch"
                 )
                 continue
@@ -197,7 +197,7 @@ def main(xlsx_path: str) -> None:
         writer.writerows(gold_rows)
 
     print(f"Wrote {len(gold_rows)} gold rows to {gold_path}")
-    print(f"Documents + codebooks seeded into codifica.sqlite")
+    print(f"Documents + codebooks seeded into decifra.sqlite")
 
 
 if __name__ == "__main__":

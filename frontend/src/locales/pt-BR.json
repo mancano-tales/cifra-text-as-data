@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Cifra",
+    "title": "Decifra",
     "tagline": "codificação de texto guiada por codebook",
     "nav": {
       "corpus": "Corpus",

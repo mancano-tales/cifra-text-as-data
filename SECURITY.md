@@ -1,6 +1,6 @@
 # Security Policy
 
-Cifra is pre-1.0 software under active, single-repository development.
+Decifra is pre-1.0 software under active, single-repository development.
 There is no formal support matrix yet — only the `main` branch is
 maintained, and security fixes land there directly.
 
@@ -30,10 +30,10 @@ released.
 
 ## What's out of scope
 
-- The LLM providers themselves (Anthropic, OpenAI, or any CLI Cifra shells
+- The LLM providers themselves (Anthropic, OpenAI, or any CLI Decifra shells
   out to) — report those upstream.
 - Findings that require local admin/filesystem access to the machine
-  running Cifra — this is a local-first tool with no remote deployment in
+  running Decifra — this is a local-first tool with no remote deployment in
   its current design (see `AGENTS.md`'s architecture section).
 
 ## Response expectations

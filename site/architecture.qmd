@@ -28,13 +28,13 @@ feature conceptually close to a validation step. The real difference is
 architectural, not manual-vs-automated:
 
 - **Scale ceiling**: QualiLab caps a single send at roughly 600,000
-  characters total, with documents beyond that dropped entirely. Cifra
+  characters total, with documents beyond that dropped entirely. Decifra
   needs to run hundreds or thousands of LLM calls over a full corpus with
   no such ceiling.
 - **Execution model**: QualiLab's AI calls are synchronous within the open
   browser tab, with no persistent job queue and no resumable run if the tab
   closes — a direct consequence of its deliberate single-file,
-  no-server-of-its-own design. Cifra's batched calls need retry, caching,
+  no-server-of-its-own design. Decifra's batched calls need retry, caching,
   and cost tracking, and must survive closing the tab; that calls for a
   real backend process.
 - **Credential handling**: routing an API key through browser JavaScript
@@ -42,7 +42,7 @@ architectural, not manual-vs-automated:
   batches. A local backend keeps the key server-side, never shipped to the
   page.
 
-This is not a reason to ignore QualiLab — it's the reason Cifra treats
+This is not a reason to ignore QualiLab — it's the reason Decifra treats
 interoperability with it as a real priority (round-tripping corpora and
 gold labels) rather than duplicating its mature manual-review UI from
 scratch. See the codebook/data model below for where that interop lands.

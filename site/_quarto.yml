@@ -10,11 +10,11 @@ execute:
   freeze: auto
 
 website:
-  title: "Cifra"
-  description: "A local-first tool that turns a researcher-authored codebook and a text corpus into a structured, LLM-coded table — validated against human coding, not trusted on faith."
-  site-url: https://mancano-tales.github.io/cifra-text-as-data/
+  title: "Decifra"
+  description: "A local-first tool that turns your codebook and a text corpus into a structured, LLM-coded table — validated against human coding, not trusted on faith."
+  site-url: https://mancano-tales.github.io/decifra-text-as-data/
 
-  repo-url: https://github.com/mancano-tales/cifra-text-as-data
+  repo-url: https://github.com/mancano-tales/decifra-text-as-data
   repo-actions: [source, issue]
 
   page-navigation: true
@@ -34,14 +34,14 @@ website:
         href: validation.qmd
     right:
       - icon: github
-        href: https://github.com/mancano-tales/cifra-text-as-data
+        href: https://github.com/mancano-tales/decifra-text-as-data
         target: _blank
       - text: "← Main Site"
         href: https://mancano-tales.github.io
         target: _blank
 
   sidebar:
-    - title: "Cifra"
+    - title: "Decifra"
       style: docked
       contents:
         - text: Overview
@@ -60,7 +60,7 @@ website:
       Built with [Quarto](https://quarto.org)
     right:
       - icon: github
-        href: https://github.com/mancano-tales/cifra-text-as-data
+        href: https://github.com/mancano-tales/decifra-text-as-data
         target: _blank
 
   open-graph: true

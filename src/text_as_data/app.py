@@ -37,7 +37,7 @@ _EXPORT_BUILDERS = {
     "json": results_to_json_bytes,
 }
 
-app = FastAPI(title="Cifra backend (Slice 1)")
+app = FastAPI(title="Decifra backend (Slice 1)")
 
 app.add_middleware(
     CORSMiddleware,
@@ -836,8 +836,8 @@ async def export_run_to_qualilab(
         media_type=media_type,
         headers={
             "Content-Disposition": f'attachment; filename="run_{run_id}_export.qualilab"',
-            "X-Cifra-Matched-Count": str(result.matched_count),
-            "X-Cifra-Skipped-Count": str(result.skipped_count),
+            "X-Decifra-Matched-Count": str(result.matched_count),
+            "X-Decifra-Skipped-Count": str(result.skipped_count),
         },
     )
 

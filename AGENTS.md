@@ -60,12 +60,25 @@ repo was scaffolded at "light" governance level, same tier as
 > This section captures the author's brief for evolving the current
 > library scaffold into a full application, agreed 2026-08-31. It is the
 > source of truth for scope and architecture until superseded by a dated
-> update to this section. Working product name: **"Cifra"** (finalized
-> 2026-09-01, superseding the earlier "Codifica" placeholder — chosen to
-> avoid colliding with existing tools like "Codebook LLMs", which is a
-> paper name, not a product). The package/repo keeps the name
-> `text-as-data`; renaming the repo is a cosmetic decision deferred to
-> later.
+> update to this section. Working product name: **"Decifra"** (renamed
+> 2026-09-03, superseding "Cifra", which itself superseded the earlier
+> "Codifica" placeholder — "Cifra" collided informally with unrelated
+> existing brands; "Decifra" ["to decipher"] keeps the same
+> encoding/decoding metaphor while avoiding that collision, and still does
+> not collide with existing tools like "Codebook LLMs", which is a paper
+> name, not a product). Unlike the earlier Codifica→Cifra rename, this one
+> did reach the repo name: the GitHub remote is now
+> `mancano-tales/decifra-text-as-data` (renamed by the author 2026-09-03).
+> The local package import path stays `text_as_data` — renaming that is
+> still the cosmetic, deferred-to-later decision described below; only the
+> product/repo name changed, not the Python package. The main working
+> directory on this machine was deliberately **not** renamed to match: it
+> is the hub for several active `git worktree` checkouts (see
+> [`docs/MULTI_AGENT_WORKTREES.md`](docs/MULTI_AGENT_WORKTREES.md)), and
+> renaming it would break their linked `.git` metadata. It keeps the
+> `cifra-text-as-data` folder name until someone deliberately retires those
+> worktrees and repairs the links — that folder name is now stale relative
+> to the product/repo name, on purpose, until then.
 
 ### The problem
 
@@ -371,7 +384,7 @@ which was the simpler alternative).
   Operationalizes Fairfield & Charman (2022) Bayesian process tracing: each
   row of evidence is evaluated against a pair of competing hypotheses on a
   7-level verbal probability scale (`quase_certa` … `quase_impossivel`).
-- **How this maps onto the Cifra codebook format**: cleanly, no engine
+- **How this maps onto the Decifra codebook format**: cleanly, no engine
   redesign needed. `categoria` enum = the 7 verbal-probability labels;
   `justificativa` = `ek_justificativa_likelihoods` (the human's own
   reasoning, already the field the workbook's manual calls "the most

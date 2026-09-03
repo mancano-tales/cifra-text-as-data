@@ -194,11 +194,11 @@ def test_export_run_to_qualilab_returns_updated_file_with_count_headers():
     )
 
     assert response.status_code == 200
-    assert response.headers["X-Cifra-Matched-Count"] == "9"
-    assert response.headers["X-Cifra-Skipped-Count"] == "0"
+    assert response.headers["X-Decifra-Matched-Count"] == "9"
+    assert response.headers["X-Decifra-Skipped-Count"] == "0"
 
     exported = json.loads(response.content)
-    cifra_entries = [v for v in exported["doc_values"] if v["author_name"].startswith("Cifra")]
+    cifra_entries = [v for v in exported["doc_values"] if v["author_name"].startswith("Decifra")]
     assert len(cifra_entries) == 9
     assert all(v["value"] == "Favorável" for v in cifra_entries)  # FakeProvider always answers "favoravel"
 

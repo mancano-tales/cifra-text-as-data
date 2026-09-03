@@ -8,7 +8,7 @@ subtitle: "Not a checklist item — the thing that separates data from a guess"
 [Halterman & Keith (2025)](https://arxiv.org/abs/2407.10747) and the same
 group's 2026 follow-up argue that off-the-shelf LLMs frequently substitute
 their own generic notion of a concept for a codebook's specific
-operationalization. Cifra's design takes that seriously enough to build a
+operationalization. Decifra's design takes that seriously enough to build a
 whole screen around catching it — but a citation isn't proof it applies to
 *this* pipeline. So it was tested for real, against real data, with the
 result kept regardless of which way it came out.
@@ -22,7 +22,7 @@ tracks partisan turnover"* vs. *"de-commodification is the real
 redistributive mechanism"*), each evaluated against real news evidence on a
 seven-level verbal probability scale.
 
-Sixteen real evidence/hypothesis-pair evaluations were run through Cifra's
+Sixteen real evidence/hypothesis-pair evaluations were run through Decifra's
 actual extraction engine — not a mocked call, not a description of what the
 model would probably say — using a codebook that named each hypothesis and
 its scale, but nothing more:
@@ -79,7 +79,7 @@ and provider, nothing else changed:
 | The scope-condition case (left-wing government vs. a right-wing-specific hypothesis) | `muito_provavel` (wrong) | `quase_impossivel`, with the model's own justification naming the governing party and calling it a "hoop test failure" |
 
 Same model. Same provider. Only the prompt changed. This is the concrete,
-falsifiable version of Cifra's own thesis: an LLM coding failure is, first
+falsifiable version of Decifra's own thesis: an LLM coding failure is, first
 and most often, a codebook-specification problem — not a reason to swap
 models.
 
@@ -93,12 +93,12 @@ for that reversal side by side showed two independently well-reasoned
 readings of genuinely ambiguous evidence — not the model being incoherent.
 
 The practical conclusion: even a well-specified codebook does not make a
-single LLM run definitive. Cifra's validation screen exists to compare
+single LLM run definitive. Decifra's validation screen exists to compare
 output against human gold labels — this finding is why running a category
 more than once, or otherwise surfacing sampling variance, matters too, not
 just codebook quality.
 
-## What this means for using Cifra
+## What this means for using Decifra
 
 Treat every automated result as provisional until it has been checked
 against a human-coded sample for that specific codebook. A tight, richly
@@ -110,4 +110,4 @@ for manual reading) is what turns that check into a number, not a feeling.
 
 Full methodology, including the verification procedure used to prove none
 of the numbers above were reconstructed after the fact, is in the
-[repository's research notes](https://github.com/mancano-tales/cifra-text-as-data/blob/main/docs/research/2026-09-02_llm_pipeline_verification_methodology.md).
+[repository's research notes](https://github.com/mancano-tales/decifra-text-as-data/blob/main/docs/research/2026-09-02_llm_pipeline_verification_methodology.md).

@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 from .codebook import spec_from_yaml_string
 from .db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord
 
-# Cifra's own software version isn't tracked as a release number anywhere
+# Decifra's own software version isn't tracked as a release number anywhere
 # yet (see AGENTS.md's build-order notes -- this is still pre-1.0, slice by
 # slice); the git commit is the only thing that actually identifies "what
 # code produced this run" today.
@@ -54,8 +54,8 @@ def build_disclosure(session: Session, run: RunRecord) -> dict:
     across psychology/economics/sociology/AI/ethics for reporting LLM use in
     behavioral and social science research -- see llm-checklist.com) asks 13
     specific questions grouped into 7 sections (A-G). This maps each one onto
-    what Cifra actually knows about a run, rather than a generic AI-use
-    paragraph -- and says so honestly where Cifra doesn't track something,
+    what Decifra actually knows about a run, rather than a generic AI-use
+    paragraph -- and says so honestly where Decifra doesn't track something,
     instead of leaving the question unanswered or guessing.
 
     This is deliberately a *report*, not a form the researcher fills in: the
@@ -84,7 +84,7 @@ def build_disclosure(session: Session, run: RunRecord) -> dict:
             "note": (
                 "Consensus reporting checklist for LLM use in behavioral/social "
                 "science research (Feuerriegel et al.). This report answers its "
-                "13 items from A to G using what Cifra recorded for this run."
+                "13 items from A to G using what Decifra recorded for this run."
             ),
         },
         "A_purpose_and_application": {
@@ -96,7 +96,7 @@ def build_disclosure(session: Session, run: RunRecord) -> dict:
             ),
             "A2_human_in_the_loop": (
                 "Per-document categorization is fully automated (unattended batch run, no human review during "
-                "execution). The codebook that defines the categories is human-authored, and Cifra's own design "
+                "execution). The codebook that defines the categories is human-authored, and Decifra's own design "
                 "treats every automated result as provisional until validated against a human-coded gold sample "
                 "(see AGENTS.md, \"Why the validation step is not optional\") -- see section E for whether that "
                 "validation has actually been done for this codebook."
@@ -112,11 +112,11 @@ def build_disclosure(session: Session, run: RunRecord) -> dict:
             },
             "B2_access_mode": f"{provider_label}; each document is one independent request (see B5).",
             "B3_parameters": (
-                "Not explicitly configured by Cifra (temperature, max_tokens, seed) -- provider/library defaults "
+                "Not explicitly configured by Decifra (temperature, max_tokens, seed) -- provider/library defaults "
                 "apply. Not tracked per-run in this version; a fixed, disclosed default would need to be set "
                 "explicitly in providers.py before this could report a real value instead of this note."
             ),
-            "B4_finetuning": "None. No fine-tuned or customized model is used at any point in Cifra's pipeline.",
+            "B4_finetuning": "None. No fine-tuned or customized model is used at any point in Decifra's pipeline.",
             "B5_session_state": (
                 "No. Each document is a stateless, independent call: build_messages() constructs a fresh "
                 "prompt from the codebook and that document's text alone, with no memory of prior documents "
@@ -144,7 +144,7 @@ def build_disclosure(session: Session, run: RunRecord) -> dict:
         },
         "E_output_processing": {
             "E1_human_validation": (
-                "Not recorded for this run: Cifra does not yet persist a link between a run and a human-coded "
+                "Not recorded for this run: Decifra does not yet persist a link between a run and a human-coded "
                 "gold-label validation result for its codebook (the Validation screen, AGENTS.md's Screen 5, is "
                 "still being built as of this report). Treat this run's output as unvalidated until a kappa/"
                 "precision/recall check against a human-coded sample has actually been run for this codebook."
@@ -155,12 +155,12 @@ def build_disclosure(session: Session, run: RunRecord) -> dict:
             "F1_code_and_scripts": (
                 "Full pipeline is open source: github.com/ (see this repo's own remote). "
                 f"Codebook YAML: `codebooks/{run.codebook_id}` (GET /codebooks/{run.codebook_id}). "
-                f"Run parameters: GET /runs/{run.id}. Cifra commit: {_git_commit() or 'unknown (no git checkout)'}."
+                f"Run parameters: GET /runs/{run.id}. Decifra commit: {_git_commit() or 'unknown (no git checkout)'}."
             ),
         },
         "G_conflicts_and_support": {
             "G1_funding_support": (
-                "Not applicable at the software level -- Cifra has no funding/support relationship with any "
+                "Not applicable at the software level -- Decifra has no funding/support relationship with any "
                 "provider. Report your own funding and provider account relationships (e.g. institutional API "
                 "credits) in your paper's own disclosures."
             ),

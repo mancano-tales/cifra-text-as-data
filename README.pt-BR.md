@@ -1,18 +1,18 @@
 <!-- 🇧🇷 Português — [🇺🇸 English version](README.md) -->
 
-# cifra-text-as-data — Cifra
+# decifra-text-as-data — Decifra
 
-O **Cifra** é uma ferramenta local-first para transformar texto não estruturado (notícias, declarações políticas, relatórios de segurança pública) em dados categóricos usando um LLM orientado por um **codebook** explícito que você define — com uma etapa de validação contra rótulos codificados por humanos, porque LLMs não seguem a operacionalização específica de um codebook com fidelidade perfeita.
+O **Decifra** é uma ferramenta local-first para transformar texto não estruturado (notícias, declarações políticas, relatórios de segurança pública) em dados categóricos usando um LLM orientado por um **codebook** explícito que você define — com uma etapa de validação contra rótulos codificados por humanos, porque LLMs não seguem a operacionalização específica de um codebook com fidelidade perfeita.
 
-Não é uma ferramenta de codificação qualitativa manual (veja [Taguette](https://www.taguette.org/), [QualCoder](https://github.com/ccbogel/QualCoder) ou [QualiLab](https://github.com/LuizPF42/QualiLab) para isso). Você define um codebook, aponta para um corpus, e o Cifra chama o LLM sobre cada documento e preenche a tabela de output automaticamente.
+Não é uma ferramenta de codificação qualitativa manual (veja [Taguette](https://www.taguette.org/), [QualCoder](https://github.com/ccbogel/QualCoder) ou [QualiLab](https://github.com/LuizPF42/QualiLab) para isso). Você define um codebook, aponta para um corpus, e o Decifra chama o LLM sobre cada documento e preenche a tabela de output automaticamente.
 
-**Status:** MVP completo — as cinco telas existem (Corpus, Codebook, Runs, Results, Validation). Ainda não há instalador empacotado; rodar o Cifra hoje exige iniciar dois servidores de desenvolvimento pelo terminal (veja "Executando" abaixo).
+**Status:** MVP completo — as cinco telas existem (Corpus, Codebook, Runs, Results, Validation). Ainda não há instalador empacotado; rodar o Decifra hoje exige iniciar dois servidores de desenvolvimento pelo terminal (veja "Executando" abaixo).
 
 ---
 
-## Por que o Cifra?
+## Por que o Decifra?
 
-A classificação de texto por LLMs corre o risco de **violar a validade de construto**: o modelo aplica a *sua* operacionalização específica de um conceito, ou recai no conceito genérico aprendido durante o pré-treinamento (ex.: contando uma greve trabalhista como "protesto" mesmo quando o codebook exclui isso)? Ver Halterman & Keith, *"Codebook LLMs: Evaluating LLMs as Measurement Tools for Political Science Concepts"* (*Political Analysis*, 2025). O Cifra trata a validação do output do LLM contra codificação humana como uma etapa central do pipeline, não um detalhe secundário.
+A classificação de texto por LLMs corre o risco de **violar a validade de construto**: o modelo aplica a *sua* operacionalização específica de um conceito, ou recai no conceito genérico aprendido durante o pré-treinamento (ex.: contando uma greve trabalhista como "protesto" mesmo quando o codebook exclui isso)? Ver Halterman & Keith, *"Codebook LLMs: Evaluating LLMs as Measurement Tools for Political Science Concepts"* (*Political Analysis*, 2025). O Decifra trata a validação do output do LLM contra codificação humana como uma etapa central do pipeline, não um detalhe secundário.
 
 ---
 
@@ -47,7 +47,7 @@ Você também vai precisar de `ANTHROPIC_API_KEY` ou `OPENAI_API_KEY` como vari�
 
 ## Executando (desenvolvimento)
 
-Ainda não há app empacotado — rodar o Cifra hoje significa iniciar o backend FastAPI e o frontend Vite juntos. `scripts/dev.sh` (macOS/Linux/Git Bash) e `scripts/dev.ps1` (PowerShell nativo) fazem isso com um comando em vez de dois terminais:
+Ainda não há app empacotado — rodar o Decifra hoje significa iniciar o backend FastAPI e o frontend Vite juntos. `scripts/dev.sh` (macOS/Linux/Git Bash) e `scripts/dev.ps1` (PowerShell nativo) fazem isso com um comando em vez de dois terminais:
 
 ```bash
 scripts/dev.sh              # backend em :8000, frontend em :5173
@@ -134,4 +134,4 @@ Executa 238 testes cobrindo o motor de codebook, os dois modos de provedor, os m
 
 ## Empacotamento (não iniciado)
 
-O plano (ver `AGENTS.md` § "Product trajectory") é um app desktop empacotado — o backend Python compilado em um único binário, rodando localmente, para que instalar o Cifra seja "baixar e abrir" em vez de "clonar o repositório e iniciar dois servidores de desenvolvimento". Esse trabalho ainda não começou. O `AGENTS.md` condiciona isso à validação do pipeline com uso real primeiro.
+O plano (ver `AGENTS.md` § "Product trajectory") é um app desktop empacotado — o backend Python compilado em um único binário, rodando localmente, para que instalar o Decifra seja "baixar e abrir" em vez de "clonar o repositório e iniciar dois servidores de desenvolvimento". Esse trabalho ainda não começou. O `AGENTS.md` condiciona isso à validação do pipeline com uso real primeiro.

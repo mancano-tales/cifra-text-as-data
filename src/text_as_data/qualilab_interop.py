@@ -317,7 +317,7 @@ def inject_extractions_into_qualilab(
                 "category_id": category_id,
                 "value": reverse_value_mapping[extraction.categoria],
                 "set_by": None,  # not a string (finding #8): QualiLab expects a real user id or null
-                "author_name": f"Cifra ({model_label})",
+                "author_name": f"Decifra ({model_label})",
                 "layer": "individual",
             }
         )

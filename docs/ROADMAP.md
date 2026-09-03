@@ -134,8 +134,8 @@ Today the API key is read only from `ANTHROPIC_API_KEY` /
 
 Do:
 - A `config.py` that reads/writes a config file in the platform user
-  config dir (`platformdirs`; e.g. `%APPDATA%/Cifra/config.toml`,
-  `~/Library/Application Support/Cifra/`, `~/.config/cifra/`). Keys stored
+  config dir (`platformdirs`; e.g. `%APPDATA%/Decifra/config.toml`,
+  `~/Library/Application Support/Decifra/`, `~/.config/decifra/`). Keys stored
   with `keyring` when available, plain file with a warning otherwise.
   Environment variables still override, for scripting.
 - `GET/PUT /settings` endpoints (never return the full key; return a
@@ -274,6 +274,15 @@ Acceptance: a run against a local Ollama model completes and the
 disclosure report names the local endpoint; a model name with no vendor
 gives a 422 with a helpful message.
 
+**Implementation reference**: CatLLM's Ollama tooling (`cat-stack`'s
+`_providers.py`, verified in
+`docs/research/2026-09-02_catllm_deep_dive_and_honest_comparison.md` § 5)
+is materially ahead of anything Decifra has today — a running/model-presence
+check, disk-space-aware `pull_ollama_model()` with confirmation, and a
+dedicated two-step classify path for local models that don't reliably
+follow single-shot JSON-schema instructions. Worth reading before
+implementing this brief rather than rediscovering the same edge cases.
+
 ### R2.7 `[ ]` Dev environment hygiene
 
 **Depends on**: nothing. **Size**: hours. **Spec first**: no.
@@ -286,6 +295,88 @@ gives a 422 with a helpful message.
   30 seconds.
 - A `pytest` conftest that adds `src/` to `sys.path` so a stale editable
   install cannot make the suite fail with `ModuleNotFoundError`.
+
+### R2.8 `[ ]` Claude Agent SDK as a second CLI-mode execution path
+
+**Depends on**: nothing (parallel to R2.6, touches `CliProvider` in
+`providers.py` instead). **Size**: 1-2 days. **Spec first**: yes, short —
+`AGENTS.md`'s "LLM provider" section calls the provider-layer architecture
+"a closed decision — do not reopen without a strong reason"; this brief's
+own justification (below) is that reason, but the author should sign off
+before code changes to that layer.
+
+Decifra's current CLI mode (`CliProvider`) shells out to `claude -p` via raw
+`subprocess.run`, parses best-effort JSON from stdout, and already needed
+one round of Windows-specific bug fixes (`shutil.which()` resolution,
+explicit `encoding="utf-8"`) documented in `AGENTS.md`. Independent
+verification against CatLLM's own CLI-subscription code
+(`docs/research/2026-09-02_catllm_deep_dive_and_honest_comparison.md` § 5)
+found the *same* two bug patterns present, unfixed, in their raw-subprocess
+path — confirming this class of bug is a structural risk of shelling to a
+CLI at all, not a one-off Decifra mistake. CatLLM's second execution path
+(`claude-agent`, via the `claude_agent_sdk` Python package) avoids the
+whole bug class by not using `subprocess` for the Claude case: it gets
+structured `RateLimitEvent`/`ResultMessage` objects instead of
+string-sniffing stderr, and explicit session sealing
+(`max_turns=1`, `allowed_tools=[]`, `setting_sources=[]`) so running
+classification from inside a git repo does not leak that repo's
+`CLAUDE.md`/project settings into the classification prompt — a
+correctness concern Decifra's current `CliProvider` does not address at all
+and should, since Decifra itself is usually run from inside a repo with its
+own `CLAUDE.md`/`AGENTS.md`.
+
+Do:
+- Add a `claude_agent_sdk`-backed provider mode alongside the existing raw
+  `CliProvider`, selectable the same way API-key vs. CLI mode already is.
+  Same `ProviderResult(parsed, prompt, raw_response)` contract as every
+  other provider — no changes to callers.
+- Explicit session sealing (no ambient `CLAUDE.md`/project settings reaching
+  the classification prompt) — test this directly: run from inside a repo
+  that has its own `CLAUDE.md` with distinctive content and assert none of
+  it appears in `prompt_sent`.
+- Keep the raw-subprocess `CliProvider` as-is for non-Claude CLIs (Codex,
+  the generic adapter) — this brief only replaces the Claude-specific path,
+  not the general "shell out to any configured CLI" design.
+
+Acceptance: CLI mode against Claude can run via either the existing raw
+subprocess path or the new SDK path; a run from inside a git repo with its
+own `CLAUDE.md` does not leak that file's content into `prompt_sent` on the
+SDK path (write the test that would have caught the leak if it existed).
+
+### R2.9 `[ ]` Decifra as an MCP server
+
+**Depends on**: R2.4 recommended (stable entry point) but not required.
+**Size**: 2-3 days. **Spec first**: yes — new externally-facing surface;
+get the author's sign-off on exactly which operations are exposed before
+writing code.
+
+Distinct from R2.8: R2.8 is about how Decifra *calls* an LLM provider; this
+is about exposing Decifra itself as a tool an MCP client (Claude Desktop,
+Claude Code, or any other MCP host) can drive directly, so a researcher can
+manage codebooks/corpora/runs from within a chat instead of only the web UI
+or `curl`. Not requested by, and no equivalent in, CatLLM's own codebase —
+this is Decifra-original scope, not a catch-up item.
+
+Do:
+- A small MCP server (official `mcp` Python SDK) exposing a deliberately
+  narrow tool surface — start with read operations that are safe with no
+  confirmation (list codebooks, list corpora, get run status, get results,
+  get validation report) — as its own process or an additional mode of the
+  existing FastAPI app, never a replacement for the REST API.
+- Any tool that costs money or mutates state (starting a run, deleting a
+  corpus) needs the spec to say explicitly whether it's exposed at all, and
+  if so, how the MCP client surfaces a confirmation step to the human before
+  calling it — mirror this repo's own "explicit permission required"
+  pattern for side-effectful actions rather than inventing a new one.
+- Reuse the existing service-layer functions the REST endpoints already
+  call; the MCP tool layer should be a thin adapter, not a second
+  implementation of run/validation logic.
+
+Acceptance: a Claude Desktop or Claude Code session with the Decifra MCP
+server configured can list codebooks and corpora and read back a run's
+results and validation report, without opening the browser UI; starting a
+run (if in scope per the spec) requires an explicit confirmation step
+visible to the human, not a silent tool call.
 
 ---
 
@@ -384,6 +475,40 @@ your own implementation.
 Measured self-agreement on the V7 pilot was 21/32. Add `n_repeats` on a
 run, store every repeat, expose a per-document agreement rate and a
 majority category, and let validation run against the majority.
+
+### R6.2b `[ ]` Multi-model ensemble consensus (additive to R6.2)
+
+**Depends on**: nothing (independent of R6.2's same-model repeats).
+**Size**: 1-2 days.
+
+Distinct from R6.2: R6.2 repeats the *same* model N times and takes a
+majority vote (self-consistency signal). This runs *different* models
+(e.g. a Claude model, a GPT model, a Gemini model) on the same document +
+codebook and requires configurable agreement before accepting a category —
+a genuinely different reliability signal, useful specifically because it
+needs no gold-standard set at all (unlike Decifra's kappa-against-gold-labels
+validation, which does). Verified prior art:
+`docs/research/2026-09-02_catllm_deep_dive_and_honest_comparison.md` § 8,
+CatLLM's `classify_ensemble`/`consensus_threshold`
+(`text_functions_ensemble.py`) supports `"majority"`/`"two-thirds"`/
+`"unanimous"`/a custom float and persists a per-row
+`category_N_agreement`/`category_N_resolved_by` audit column.
+
+Do:
+- A `models: list[str]` option on a run (plural, replacing/extending the
+  single-model field), with a `consensus_threshold` setting.
+- Run each configured model per document, compare `categoria` across
+  models, and persist a per-row agreement fraction and which models
+  disagreed — alongside the existing `justificativa`/`trecho_evidencia`
+  fields, not replacing them (keep one rationale, from the resolved/
+  majority model, per row).
+- Treat this as additive to, not a replacement for, gold-standard
+  validation — a low-agreement row is a candidate for the researcher's
+  attention, not evidence of correctness by itself.
+
+Acceptance: a run configured with 2+ models produces one results table
+with a visible per-row agreement signal; a single-model run is unaffected
+(this is opt-in, not a default behavior change).
 
 ### R6.3 `[ ]` Label-free codebook diagnostics (Halterman & Keith)
 

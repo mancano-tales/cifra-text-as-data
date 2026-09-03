@@ -150,7 +150,7 @@ def _ensure_columns(dbapi_connection) -> None:
     exist -- it never alters an existing table's columns. Twice now
     (prompt_sent/raw_response on ExtractionRecord, provider_mode/
     provider_detail on RunRecord above) a field added to a model has left
-    a live shared `codifica.sqlite` on disk with the old, narrower shape,
+    a live shared `decifra.sqlite` on disk with the old, narrower shape,
     and every query touching that table 500s until someone runs an
     `ALTER TABLE` by hand. This closes that gap generally instead of
     perpetuating it one manual fix at a time: new tables still come from
@@ -177,7 +177,7 @@ def _ensure_columns(dbapi_connection) -> None:
             dbapi_connection.execute(f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {sqlite_type}{default_sql}')
 
 
-def get_engine(db_url: str = "sqlite:///codifica.sqlite"):
+def get_engine(db_url: str = "sqlite:///decifra.sqlite"):
     is_in_memory = db_url == "sqlite://" or ":memory:" in db_url
     kwargs = {"poolclass": StaticPool} if is_in_memory else {}
     engine = create_engine(
@@ -193,7 +193,7 @@ def get_engine(db_url: str = "sqlite:///codifica.sqlite"):
             # WAL lets readers and a writer proceed concurrently instead of
             # the default rollback-journal mode's whole-file lock -- with
             # multiple processes (this project's own dev sessions today)
-            # sharing one codifica.sqlite, that default mode means a
+            # sharing one decifra.sqlite, that default mode means a
             # background run_extraction write can make an unrelated read
             # fail with "database is locked". WAL needs a real file, so
             # this is skipped for in-memory test databases.

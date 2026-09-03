@@ -75,7 +75,7 @@ record alone.
 
 ## 4. Calling the model — two provider modes, one interface
 
-Cifra's provider layer is deliberately agent-agnostic. Both modes implement
+Decifra's provider layer is deliberately agent-agnostic. Both modes implement
 the same `Provider.extract(messages, schema)` interface, so the extraction
 engine never has to know which one is active:
 
@@ -132,7 +132,7 @@ AI-use paragraph.
 Once a subset of documents has human-coded gold labels — either imported
 directly as a plain CSV, or round-tripped from a
 [QualiLab](https://github.com/luizpf42/QualiLab) manual-coding project —
-Cifra computes accuracy, Cohen's kappa, and per-category precision/recall/F1
+Decifra computes accuracy, Cohen's kappa, and per-category precision/recall/F1
 against a run's output, and surfaces the disagreements for manual reading.
 See [Why Validation Matters](validation.qmd) for why this step exists at
 all and what it caught in practice.

@@ -1,5 +1,32 @@
 # NEWS
 
+## 2026-09-03 (1)
+
+- Product renamed from **Cifra** to **Decifra** (author decision), because
+  "Cifra" collided informally with unrelated existing brands; "Decifra"
+  keeps the same encoding/decoding metaphor. The author renamed the GitHub
+  repository itself this time (`mancano-tales/decifra-text-as-data`,
+  `origin` updated to match) — unlike the earlier Codifica→Cifra rename,
+  which stayed a documentation-only change. Branding updated across both
+  READMEs, `AGENTS.md`'s Product Vision, the FastAPI app title, the
+  `X-Cifra-Matched-Count`/`X-Cifra-Skipped-Count` QualiLab-export response
+  headers (now `X-Decifra-*`, with matching test updates), the
+  `disclosure.py` report text, the frontend page title and locale strings
+  (both `en.json` and `pt-BR.json`), the dev-server startup banners
+  (`scripts/dev.sh`/`dev.ps1`), `SECURITY.md`, the Quarto site
+  (`site/_quarto.yml` and pages, including GitHub/Pages URLs), and
+  `docs/MULTI_AGENT_WORKTREES.md`. Also updated the GitHub repo's
+  description to a bilingual EN/PT-BR one-liner. Deliberately **not**
+  renamed: dated snapshot docs (`docs/research/2026-*.md`, older `NEWS.md`
+  entries, plans under `docs/superpowers/plans/`, the dated
+  `docs/research/materials.md`) — left as historical record of what the
+  product was called when each was written, same treatment the "Codifica"
+  placeholder already gets. Also **not** renamed: the local working
+  directory (`cifra-text-as-data`), because it is the hub for several
+  active `git worktree` checkouts and renaming it would break their linked
+  `.git` metadata — see `AGENTS.md`'s Product Vision intro for the
+  reasoning and `docs/MULTI_AGENT_WORKTREES.md` for the worktree layout.
+
 ## 2026-09-02 (7)
 
 - Strategy pass after the MVP closed: a full read of the repository

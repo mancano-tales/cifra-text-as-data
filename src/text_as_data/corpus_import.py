@@ -63,7 +63,7 @@ def parse_txt_bytes(content: bytes) -> str:
     for exactly this reason (see AGENTS.md's V7 pilot mojibake note): a
     document dropped in by a researcher may already be
     Windows-1252-decoded-as-something-else corrupted before it ever
-    reaches Cifra, and fixing that once at import time is cheaper than
+    reaches Decifra, and fixing that once at import time is cheaper than
     every downstream consumer having to guard against it.
     """
     return ftfy.fix_text(content.decode("utf-8-sig"))
@@ -73,7 +73,7 @@ def parse_docx_bytes(content: bytes) -> str:
     """Extract plain text from a .docx file: every paragraph, then every
     table cell (tables don't appear in `Document.paragraphs` at all), each
     joined by a blank line. Formatting (bold, headings, etc.) is discarded
-    -- Cifra codes text content, not document structure."""
+    -- Decifra codes text content, not document structure."""
     document = docx.Document(io.BytesIO(content))
     parts = [p.text for p in document.paragraphs if p.text.strip()]
     for table in document.tables:

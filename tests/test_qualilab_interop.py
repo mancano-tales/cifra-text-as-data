@@ -355,7 +355,7 @@ def test_inject_extractions_adds_a_matching_upserted_doc_value():
     assert entry["value"] == "Sim"
     assert entry["document_id"] == "doc-1"
     assert entry["set_by"] is None
-    assert entry["author_name"] == "Cifra (test-model)"
+    assert entry["author_name"] == "Decifra (test-model)"
     assert entry["id"] == "cifra-1-doc-1-cat-a"
 
 
@@ -444,7 +444,7 @@ def test_inject_extractions_does_not_disturb_existing_codings_or_other_doc_value
         reverse_value_mapping={"yes": "Sim"}, run_id=1, model_label="test-model",
     )
 
-    assert len(result.project["doc_values"]) == 2  # the human one preserved, plus the new Cifra one
+    assert len(result.project["doc_values"]) == 2  # the human one preserved, plus the new Decifra one
     assert result.project["codings"] == project["codings"]  # untouched
     coding = result.project["codings"][0]
     content = result.project["documents"][0]["content"]

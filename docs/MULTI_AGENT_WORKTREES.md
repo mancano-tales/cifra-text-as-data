@@ -1,7 +1,7 @@
 # Running multiple Claude Code sessions against this repo: use `git worktree`
 
 **Read this if you are (or are about to be) one of several Claude Code
-sessions working on `text-as-data`/Cifra at the same time.** Full incident
+sessions working on `text-as-data`/Decifra at the same time.** Full incident
 history and the reasoning behind this recommendation:
 [`docs/research/2026-09-02_git_safety_governance_for_shared_agent_working_directory.md`](research/2026-09-02_git_safety_governance_for_shared_agent_working_directory.md).
 

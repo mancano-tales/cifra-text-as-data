@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start the Cifra backend (FastAPI/uvicorn) and frontend (Vite) together with
+# Start the Decifra backend (FastAPI/uvicorn) and frontend (Vite) together with
 # one command, for local development. Not a replacement for real packaging
 # (see AGENTS.md's Phase 2 plan) -- just removes the "two terminals" step
 # from the manual dev workflow documented in README.md.
@@ -16,7 +16,7 @@ FRONTEND_PORT="${2:-5173}"
 PIDS=()
 cleanup() {
   echo ""
-  echo "Stopping Cifra..."
+  echo "Stopping Decifra..."
   for pid in "${PIDS[@]}"; do
     kill "$pid" 2>/dev/null || true
   done
@@ -32,7 +32,7 @@ echo "Starting frontend on http://localhost:${FRONTEND_PORT} ..."
 PIDS+=($!)
 
 echo ""
-echo "Cifra is starting up:"
+echo "Decifra is starting up:"
 echo "  Backend:  http://localhost:${BACKEND_PORT}"
 echo "  Frontend: http://localhost:${FRONTEND_PORT}"
 echo ""
