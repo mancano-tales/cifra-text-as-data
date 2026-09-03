@@ -7,23 +7,20 @@ see Slice 4 in Done below)
 
 ## Prospective
 
-- Open items from the LLM-pipeline verification methodology (see
-  `docs/research/2026-09-02_llm_pipeline_verification_methodology.md`,
-  written after the author pushed on prompt provenance/reproducibility for
-  the V7 pilot): (1) unify the enriched V7 codebooks to one language
-  (Portuguese, matching the evidence corpus and the human-authored
-  probability scale — currently mixed with the English mechanism/premises
-  text) instead of the current inconsistent mix; (2) add an explicit
-  structural delimiter between "instructions end" / "evidence begins" in
-  the concatenated CLI prompt; (3) test whether scoring both hypothesis
-  sides in one joint call (forcing direct comparison) discriminates better
-  than the current two blind, separate calls — needs a schema/pipeline
-  change, not just a prompt edit; (4) ablate the fixed "careful annotator"
-  persona line in `Codebook.build_messages` (from the very first commit,
-  never tested with/without); (5) once the Validation screen exists,
-  consider running each evidence/hypothesis-pair evaluation more than once
-  before treating a single categoria as final — a same-prompt repeat run
-  on the 16 V7 candidates found only 21/32 (66%) exact agreement.
+- V7 pipeline tuning, items 1 and 3 remain open after
+  `docs/research/2026-09-03_v7_pipeline_tuning_experiments.md`'s real
+  experiments (items 2, 4, 5 resolved/measured, see Done below): (1)
+  unify the enriched V7 codebooks to one language (Portuguese) — **on
+  hold**, no Portuguese original exists for the hypothesis mechanism/
+  premises text, author's call (2026-09-02) was to skip an unreviewed
+  agent translation of ~3,500 characters of thesis content; (3) joint
+  hypothesis-pair scoring (`pilot_v7.build_joint_hypothesis_messages_and_schema`)
+  is implemented and measurably different from the two-blind-calls
+  baseline (59.4% exact match, kappa 0.48, outside the ~31% noise floor
+  measured by the reproducibility repeat) — not yet a decision about
+  whether to adopt it as the default; needs more gold labels to compare
+  *accuracy*, not more ablation runs, since the current V7 gold set (1-2
+  usable points) has no power for that.
 - Support LLM providers beyond OpenAI in `examples/` (instructor supports
   multiple providers already; the core `extraction.py` is provider-agnostic
   since it only depends on the `instructor`-patched client interface).
@@ -36,6 +33,29 @@ see Slice 4 in Done below)
 
 ## Done
 
+- 2026-09-03 — V7 pipeline tuning items 2, 4, 5 measured/resolved with
+  real `agy` runs against the real 16-candidate set (112 real LLM calls;
+  full results and analysis in
+  `docs/research/2026-09-03_v7_pipeline_tuning_experiments.md`).
+  Headline: the non-discriminating-cases fix (both hypothesis sides
+  scoring high at once, the pre-enrichment failure mode) holds at 0/16
+  across every condition tested — robust, not fragile to persona/repeat/
+  joint variations. The persona-ablation "effect" (item 4, 75% agreement
+  removing the persona line) is *smaller* than the reproducibility
+  repeat's own noise floor (68.8% agreement on an identical re-run) --
+  at N=32 this cannot be distinguished from ordinary sampling variance,
+  recorded explicitly so it isn't later cited as a clean causal effect.
+  Joint scoring (item 3) diverges from baseline more than that noise
+  floor (59.4%, kappa 0.48) — a real, measured effect, though whether
+  it's *more accurate* needs gold labels this pilot doesn't have.
+  `Codebook.build_messages`/`run_extraction` gained an `include_persona`
+  toggle (default True, backward compatible) to make the ablation
+  possible; `pilot_v7.build_joint_hypothesis_messages_and_schema` adds
+  the joint-call prompt/schema, kept out of the general `Codebook` class
+  per AGENTS.md's codebook/extraction separation rule. New
+  `scripts/run_v7_tuning_experiments.py` runs all three conditions plus
+  the joint condition in one process. 5 new tests (persona toggle, joint
+  schema shape) plus the delimiter tests from item 2.
 - 2026-09-02 — Slice 4, Validation screen: closes the last unbuilt
   screen from `AGENTS.md`'s original MVP list — every one of the 5
   screens now exists. `POST /runs/{run_id}/gold-labels` (CSV upload

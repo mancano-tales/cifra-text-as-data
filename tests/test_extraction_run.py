@@ -160,7 +160,7 @@ def test_run_extraction_does_not_treat_error_row_as_cached():
 
 
 def test_run_extraction_records_build_messages_failure_as_error_row_without_crashing(monkeypatch):
-    def _raise(self, text):
+    def _raise(self, text, include_persona=True):
         raise ValueError("mojibake broke build_messages")
 
     monkeypatch.setattr(Codebook, "build_messages", _raise)
@@ -214,7 +214,7 @@ def test_run_extraction_persists_best_effort_prompt_on_provider_failure():
 
 
 def test_run_extraction_leaves_prompt_empty_when_build_messages_fails(monkeypatch):
-    def _raise(self, text):
+    def _raise(self, text, include_persona=True):
         raise ValueError("mojibake broke build_messages")
 
     monkeypatch.setattr(Codebook, "build_messages", _raise)
