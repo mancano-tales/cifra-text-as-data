@@ -234,6 +234,45 @@ def test_cli_provider_records_exact_prompt_and_full_raw_stdout_for_audit():
     assert result.raw_response == stdout  # full stdout, not just the extracted JSON candidate
 
 
+def test_cli_provider_inserts_delimiter_between_instructions_and_evidence():
+    # A flat CLI prompt gives up the role separation a real chat API has --
+    # without an explicit marker, a model has no structural signal for
+    # where fixed instructions end and the variable, per-document evidence
+    # begins. See docs/research/2026-09-02_llm_pipeline_verification_methodology.md.
+    captured = {}
+
+    def capturing_runner(command, input, capture_output, encoding, timeout):
+        captured["input"] = input
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"categoria": "protest"}', stderr="")
+
+    provider = CliProvider(command=["fake-cli"], runner=capturing_runner)
+    messages = [{"role": "system", "content": "codebook instructions here"}, {"role": "user", "content": "the evidence text"}]
+
+    provider.extract(messages=messages, schema=Label)
+
+    prompt = captured["input"]
+    delimiter_pos = prompt.index(CliProvider._INSTRUCTIONS_EVIDENCE_DELIMITER)
+    assert prompt.index("codebook instructions here") < delimiter_pos < prompt.index("the evidence text")
+
+
+def test_cli_provider_omits_delimiter_when_there_is_no_preceding_instructions_block():
+    # A single-message call (no separate system/instructions message) has
+    # nothing for a delimiter to separate -- the prompt should be exactly
+    # the message content, unprefixed, matching pre-delimiter behavior.
+    captured = {}
+
+    def capturing_runner(command, input, capture_output, encoding, timeout):
+        captured["input"] = input
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"categoria": "protest"}', stderr="")
+
+    provider = CliProvider(command=["fake-cli"], runner=capturing_runner)
+
+    provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
+
+    assert captured["input"].startswith("x")
+    assert CliProvider._INSTRUCTIONS_EVIDENCE_DELIMITER not in captured["input"]
+
+
 def test_cli_provider_decodes_non_ascii_output_correctly():
     # End-to-end sanity check that non-ASCII text (e.g. Portuguese
     # accented characters from the V7 pilot corpus) survives the round
