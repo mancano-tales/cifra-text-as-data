@@ -102,14 +102,22 @@ class Codebook:
     instructions: str
     examples: list[dict] = field(default_factory=list)
 
-    def build_messages(self, text: str) -> list[dict]:
-        system = (
-            "You are a careful annotator applying a fixed coding scheme. "
-            "Follow the instructions below exactly as written, even when a "
-            "case looks similar to a more common or generic concept. Do not "
-            "substitute your own default definition for the one given.\n\n"
-            f"{self.instructions}"
-        )
+    _PERSONA = (
+        "You are a careful annotator applying a fixed coding scheme. "
+        "Follow the instructions below exactly as written, even when a "
+        "case looks similar to a more common or generic concept. Do not "
+        "substitute your own default definition for the one given.\n\n"
+    )
+
+    def build_messages(self, text: str, include_persona: bool = True) -> list[dict]:
+        # `include_persona` exists to let an ablation test isolate the fixed
+        # persona line's own effect from the codebook's actual instructions
+        # -- see docs/research/2026-09-02_llm_pipeline_verification_methodology.md's
+        # "provenance of the fixed persona line" section, which flagged that
+        # this line (present since the project's very first commit, before
+        # any specific codebook existed) had never been measured with vs.
+        # without. Defaults to the existing behavior (persona included).
+        system = f"{self._PERSONA}{self.instructions}" if include_persona else self.instructions
         messages = [{"role": "system", "content": system}]
         for example in self.examples:
             messages.append({"role": "user", "content": example["text"]})

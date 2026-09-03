@@ -38,6 +38,27 @@ def test_from_yaml_string_instructions_include_definitions_and_boundary_notes():
     assert "Does not include purely ceremonial events" in codebook.instructions
 
 
+def test_build_messages_includes_persona_by_default():
+    codebook = Codebook.from_yaml_string(YAML_SOURCE)
+
+    messages = codebook.build_messages("some evidence text")
+
+    assert "careful annotator applying a fixed coding scheme" in messages[0]["content"]
+    assert codebook.instructions in messages[0]["content"]
+
+
+def test_build_messages_omits_persona_when_disabled():
+    # Ablation support: docs/research/2026-09-02_llm_pipeline_verification_methodology.md
+    # flagged the fixed persona line as never having been measured with vs.
+    # without -- this is what lets an experiment isolate its effect.
+    codebook = Codebook.from_yaml_string(YAML_SOURCE)
+
+    messages = codebook.build_messages("some evidence text", include_persona=False)
+
+    assert "careful annotator" not in messages[0]["content"]
+    assert messages[0]["content"] == codebook.instructions
+
+
 def test_from_yaml_string_rejects_duplicate_labels():
     bad_yaml = YAML_SOURCE.replace("not_protest", "protest")
     with pytest.raises(ValueError, match="duplicate category label"):
