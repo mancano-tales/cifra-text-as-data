@@ -108,6 +108,18 @@ class ExtractionRecord(SQLModel, table=True):
     categoria: str
     justificativa: str
     trecho_evidencia: str
+    # Whether trecho_evidencia was found verbatim (or near-verbatim, modulo
+    # quote/dash/whitespace normalization) in the source document -- see
+    # extraction.py's verify_evidence_span(). Ported from QualiHolo (issue
+    # #2): until this existed, a hallucinated or paraphrased quote passed
+    # through unnoticed. Flagged for the researcher to see, not used to
+    # invalidate categoria -- this repo's stance is that automated software
+    # surfaces the signal, the researcher's judgment decides what to do
+    # with it (see AGENTS.md's Product Vision).
+    evidence_verified: bool = False
+    # "exact" | "normalized" | "empty" | "too_short" | "not_found" | "" for
+    # a pre-existing row migrated before this column existed.
+    evidence_match_tier: str = ""
     tokens_used: int | None = None
     # Audit trail: the exact prompt sent and the raw (pre-parsing) response
     # received, so any result can be verified later without having to trust

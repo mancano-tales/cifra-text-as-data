@@ -8,7 +8,7 @@ import uuid
 
 from sqlmodel import Session, select
 
-from text_as_data.db import CodebookRecord, RunRecord, get_engine
+from text_as_data.db import CodebookRecord, ExtractionRecord, RunRecord, get_engine
 
 
 def _temp_sqlite_url(tmp_path) -> str:
@@ -66,3 +66,38 @@ def test_get_engine_is_idempotent_on_an_already_current_schema(tmp_path):
 
         session.add(RunRecord(codebook_id=codebook.id, corpus_id="c", model="m"))
         session.commit()
+
+
+def test_get_engine_adds_evidence_verification_columns_to_an_existing_extractions_table(tmp_path):
+    url = _temp_sqlite_url(tmp_path)
+    raw_path = url.removeprefix("sqlite:///")
+
+    # Simulate a pre-existing DB file created before evidence-span
+    # verification existed -- an "extractions" table with none of
+    # evidence_verified/evidence_match_tier (or tokens_used/prompt_sent/
+    # raw_response, also added later, to keep the simulated old shape
+    # realistic rather than just the two columns under test).
+    connection = sqlite3.connect(raw_path)
+    connection.execute(
+        "CREATE TABLE extractions ("
+        "id INTEGER PRIMARY KEY, run_id INTEGER, document_id INTEGER, "
+        "categoria TEXT, justificativa TEXT, trecho_evidencia TEXT)"
+    )
+    connection.execute(
+        "INSERT INTO extractions (run_id, document_id, categoria, justificativa, trecho_evidencia) "
+        "VALUES (1, 1, 'yes', 'because', 'a literal quote')"
+    )
+    connection.commit()
+    connection.close()
+
+    engine = get_engine(url)
+
+    with Session(engine) as session:
+        loaded = session.exec(
+            select(ExtractionRecord).where(ExtractionRecord.trecho_evidencia == "a literal quote")
+        ).first()
+        assert loaded is not None
+        # New columns exist and fall back to their model-declared defaults
+        # for a pre-existing row, rather than erroring or being NULL.
+        assert loaded.evidence_verified is False
+        assert loaded.evidence_match_tier == ""
