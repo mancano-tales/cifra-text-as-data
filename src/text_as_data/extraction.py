@@ -6,6 +6,59 @@ import pandas as pd
 
 from .codebook import Codebook
 
+_QUOTE_DASH_FOLD = str.maketrans(
+    {
+        "‘": "'", "’": "'", "‚": "'",
+        "“": '"', "”": '"', "„": '"', "«": '"', "»": '"',
+        "–": "-", "—": "-",
+    }
+)
+
+
+def _normalize_for_span_match(text: str) -> str:
+    """Lowercase, collapse whitespace, and fold curly-quote/dash variants to
+    a single canonical form, for the "normalized" tier of
+    verify_evidence_span. Must accept a model's evidence quote back even
+    when it re-typed smart quotes/em-dashes or spaced things differently
+    than the source document, without accepting a genuinely different
+    quote -- mirrors QualiHolo's normalizeMap() (see issue #2)."""
+    return " ".join(text.translate(_QUOTE_DASH_FOLD).lower().split())
+
+
+def verify_evidence_span(span: str, document_text: str) -> tuple[bool, str]:
+    """Check whether `span` is a verbatim quote from `document_text`.
+
+    Two tiers, in order, porting QualiHolo's verifySpan() design (credited
+    in issue #2, ported here because the LLM's evidence_span field --
+    `codebook.py` calls it a "Verbatim quote from the document that grounds
+    the decision" -- was, until now, never actually checked against the
+    source, so a hallucinated or paraphrased quote passed through as if it
+    were verbatim):
+
+    1. Exact substring match against `document_text`.
+    2. If that fails, both strings are normalized (quotes/dashes folded,
+       whitespace collapsed, lowercased) and the substring match is
+       retried -- this accepts a model's cosmetic re-typing of the quote
+       without accepting a genuinely different one.
+
+    Never falls back to fuzzy/similarity matching: a near-miss quote is
+    not verifiable and must not be recorded as if it were.
+
+    Returns (verified, tier), where tier is one of "exact", "normalized",
+    "empty", "too_short", or "not_found".
+    """
+    span = span.strip()
+    if not span:
+        return False, "empty"
+    if span in document_text:
+        return True, "exact"
+    normalized_span = _normalize_for_span_match(span)
+    if len(normalized_span) < 8:
+        return False, "too_short"
+    if normalized_span in _normalize_for_span_match(document_text):
+        return True, "normalized"
+    return False, "not_found"
+
 
 def extract(
     texts: pd.DataFrame,
