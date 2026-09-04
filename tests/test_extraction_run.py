@@ -331,3 +331,81 @@ def test_run_extraction_marks_run_as_error_on_setup_failure_instead_of_hanging()
         run = session.get(RunRecord, run_id)
         # Not stuck at "running" forever, and not silently "done" either.
         assert run.status == "error"
+
+
+class QuotingFakeProvider(Provider):
+    """Returns a trecho_evidencia that is an exact substring of whatever
+    document text it's asked to classify -- for testing the "verified"
+    path of run_extraction's evidence-span check without hand-writing the
+    document text to match a hardcoded quote."""
+
+    def extract(self, messages, schema):
+        document_text = messages[-1]["content"]
+        quote = document_text[:12]  # long enough to clear the too_short cutoff
+        parsed = schema(categoria="yes", justificativa="because", trecho_evidencia=quote)
+        return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
+
+
+class FabricatingFakeProvider(Provider):
+    """Always returns a trecho_evidencia that is long enough to clear the
+    too_short cutoff but never actually appears in the document text -- the
+    fabricated/paraphrased-quote case verify_evidence_span exists to
+    catch, distinct from CountingFakeProvider's "quote" (which is too
+    short to reach the not_found tier at all -- see the too_short test in
+    tests/test_evidence_verification.py)."""
+
+    def extract(self, messages, schema):
+        parsed = schema(
+            categoria="yes",
+            justificativa="because",
+            trecho_evidencia="this exact sentence never appears in the source document",
+        )
+        return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
+
+
+def test_run_extraction_records_verified_true_and_exact_tier_for_a_real_quote():
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=1)
+    run_extraction(engine, run_id, QuotingFakeProvider())
+
+    with Session(engine) as session:
+        extraction = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).one()
+        assert extraction.evidence_verified is True
+        assert extraction.evidence_match_tier == "exact"
+
+
+def test_run_extraction_records_verified_false_for_a_fabricated_quote():
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=1)
+    run_extraction(engine, run_id, FabricatingFakeProvider())
+
+    with Session(engine) as session:
+        extraction = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).one()
+        assert extraction.evidence_verified is False
+        assert extraction.evidence_match_tier == "not_found"
+
+
+def test_run_extraction_copies_verification_result_on_cache_hit_instead_of_recomputing():
+    engine = get_engine("sqlite://")
+    run_id, corpus_id = _seed(engine, n_documents=1)
+    run_extraction(engine, run_id, QuotingFakeProvider())
+
+    with Session(engine) as session:
+        codebook_id = session.exec(select(RunRecord).where(RunRecord.id == run_id)).one().codebook_id
+        second_run = RunRecord(codebook_id=codebook_id, corpus_id=corpus_id, model="fake-model")
+        session.add(second_run)
+        session.commit()
+        session.refresh(second_run)
+        second_run_id = second_run.id
+
+    # A provider that would fail verification if it were actually called --
+    # proves the cache hit path copies the prior result rather than
+    # recomputing (or, worse, calling the provider again).
+    run_extraction(engine, second_run_id, CountingFakeProvider())
+
+    with Session(engine) as session:
+        extraction = session.exec(
+            select(ExtractionRecord).where(ExtractionRecord.run_id == second_run_id)
+        ).one()
+        assert extraction.evidence_verified is True
+        assert extraction.evidence_match_tier == "exact"

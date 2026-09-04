@@ -181,6 +181,10 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
                         cached.justificativa,
                         cached.trecho_evidencia,
                     )
+                    evidence_verified, evidence_match_tier = (
+                        cached.evidence_verified,
+                        cached.evidence_match_tier,
+                    )
                     prompt_sent, raw_response = cached.prompt_sent, cached.raw_response
                 else:
                     # Best-effort fallback if build_messages succeeds but the
@@ -210,6 +214,8 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
                             error_message = error_message[:2000] + "... [truncated]"
                         categoria, justificativa, trecho = ERROR_CATEGORIA, error_message, ""
 
+                    evidence_verified, evidence_match_tier = verify_evidence_span(trecho, document.text)
+
                 session.add(
                     ExtractionRecord(
                         run_id=run.id,
@@ -217,6 +223,8 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
                         categoria=categoria,
                         justificativa=justificativa,
                         trecho_evidencia=trecho,
+                        evidence_verified=evidence_verified,
+                        evidence_match_tier=evidence_match_tier,
                         prompt_sent=prompt_sent,
                         raw_response=raw_response,
                     )
